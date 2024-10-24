@@ -1,0 +1,7 @@
+name: replicate-farm
+dependencies:
+  - python=3.8
+  - pip
+  - pip:
+      - replicate
+      - requests
