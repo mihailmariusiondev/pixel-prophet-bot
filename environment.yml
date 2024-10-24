@@ -1,8 +1,11 @@
-name: replicate-farm
+name: telegram-bot-template
+channels:
+  - defaults
+  - conda-forge
 dependencies:
-  - python=3.8
+  - python=3.12
   - pip
   - pip:
-      - replicate
-      - requests
-      - openai
+      - python-telegram-bot
+      - python-dotenv==1.0.1
+      - openai==0.27.0
