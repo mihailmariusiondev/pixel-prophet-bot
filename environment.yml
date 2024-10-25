@@ -1,4 +1,4 @@
-name: telegram-bot-template
+name: replicate-farm-bot
 channels:
   - defaults
   - conda-forge
