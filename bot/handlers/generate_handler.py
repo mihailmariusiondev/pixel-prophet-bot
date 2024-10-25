@@ -1,6 +1,6 @@
 from telegram import Update
 from telegram.ext import ContextTypes
-from services import ReplicateService
+from ..services.replicate_service import ReplicateService
 
 
 async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -20,7 +20,7 @@ async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Enviar un mensaje de "Generando..."
     message = await update.message.reply_text(f"{prompt}\n> Generando...")
 
-    # Generar la imagen
+    # Generar la imagen de forma asíncrona
     image_url = await ReplicateService.generate_image(prompt)
 
     if image_url:
