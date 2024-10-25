@@ -6,7 +6,7 @@ from .handlers import (
     help_handler,
     about_handler,
     error_handler,
-    message_handler,
+    generate_handler,  # Añadimos el nuevo manejador
 )
 
 
@@ -40,16 +40,10 @@ def run_bot():
     application.add_handler(
         CommandHandler("about", about_handler)
     )  # Handle /about command
-    logging.info("Command handlers registered")
-
-    # Register handler for text messages (excluding commands)
-    logging.info("Registering message handler...")
     application.add_handler(
-        MessageHandler(
-            filters.TEXT & ~filters.COMMAND, message_handler
-        )  # Handle non-command text messages
-    )
-    logging.info("Message handler registered")
+        CommandHandler("generate", generate_handler)
+    )  # Handle /generate command
+    logging.info("Command handlers registered")
 
     # Register error handler
     logging.info("Registering error handler...")
