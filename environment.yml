@@ -9,4 +9,5 @@ dependencies:
       - python-telegram-bot
       - python-dotenv==1.0.1
       - openai==0.27.0
-      - replicate==0.8.1  # Actualizamos a la última versión estable
+      - replicate==0.8.1
+      - pydantic==1.9.0
