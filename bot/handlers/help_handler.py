@@ -3,13 +3,14 @@ from telegram.ext import ContextTypes
 
 
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # Define the help message with available commands
-    help_handler_text = (
-        "Este bot hace cosas.\n"
-        "Comandos disponibles:\n"
-        "/start - Iniciar el bot\n"
-        "/help - Mostrar este mensaje de ayuda\n"
-        "/about - Información sobre el bot\n"
+    help_text = (
+        "Aquí tienes una guía rápida de cómo usar PixelProphetBot:\n\n"
+        "/start - Inicia el bot y muestra el mensaje de bienvenida\n"
+        "/generate [descripción] - Genera una imagen basada en tu descripción\n"
+        "/about - Muestra información sobre el bot y su creador\n"
+        "/help - Muestra este mensaje de ayuda\n\n"
+        "Para generar una imagen, simplemente usa /generate seguido de tu descripción.\n"
+        "Ejemplo: /generate un paisaje futurista con rascacielos flotantes\n\n"
+        "¡Experimenta con diferentes descripciones y deja volar tu imaginación!"
     )
-    # Send the help message to the user
-    await update.message.reply_text(help_handler_text)
+    await update.message.reply_text(help_text)
