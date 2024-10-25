@@ -8,12 +8,21 @@ from .handlers import (
     error_handler,
     generate_handler,  # Añadimos el nuevo manejador
 )
+from dotenv import load_dotenv
+from .utils.logging_config import setup_logging
 
 
 def run_bot():
     """
     Initialize and run the Telegram bot.
     """
+
+    # Setup logging
+    setup_logging()
+
+    # Añade esta línea al principio de la función
+    load_dotenv()
+
     logging.info("Starting bot initialization...")
     # Create the Application and pass it your bot's token
     logging.info("Building application with token and timeouts...")
