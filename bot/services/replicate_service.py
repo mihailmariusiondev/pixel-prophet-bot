@@ -1,14 +1,13 @@
 import replicate
-import asyncio
+import logging
 
 
 class ReplicateService:
     @staticmethod
     async def generate_image(prompt):
         try:
-            # Usamos asyncio.to_thread para ejecutar la llamada a Replicate de forma asíncrona
-            output = await asyncio.to_thread(
-                replicate.run,
+            logging.info(f"Iniciando generación de imagen para prompt: {prompt}")
+            output = await replicate.async_run(
                 "mihailmariusiondev/marius-flux:422d4bddab17dadb069e1956009fd55d58ba6c8fd5c8d4a071241b36a7cba3c7",
                 input={
                     "prompt": prompt,
@@ -23,7 +22,16 @@ class ReplicateService:
                     "num_inference_steps": 28,
                 },
             )
-            return output[0] if output else None
+            logging.info(f"Respuesta de Replicate: {output}")
+            if not output:
+                logging.error("Replicate devolvió una respuesta vacía")
+                return None
+            return output[0]
+        except replicate.exceptions.ReplicateError as e:
+            logging.error(f"Error de Replicate: {e}")
+            return None
         except Exception as e:
-            print(f"Error en la generación de imagen: {e}")
+            logging.error(
+                f"Error inesperado en la generación de imagen: {e}", exc_info=True
+            )
             return None
