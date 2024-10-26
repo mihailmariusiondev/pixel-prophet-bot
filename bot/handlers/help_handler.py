@@ -7,6 +7,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Aquí tienes una guía rápida de cómo usar PixelProphetBot:\n\n"
         "/start - Inicia el bot y muestra el mensaje de bienvenida\n"
         "/generate [descripción] - Genera una imagen basada en tu descripción\n"
+        "/variations - Genera 3 variaciones de la última imagen generada\n"
         "/download - Descarga todas las imágenes generadas a OneDrive\n"
         "/config - Ver o modificar parámetros de generación\n"
         "/about - Muestra información sobre el bot y su creador\n"

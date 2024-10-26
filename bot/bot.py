@@ -8,7 +8,8 @@ from .handlers import (
     error_handler,
     generate_handler,
     download_handler,
-    config_handler,  # Añadir esta línea
+    config_handler,
+    variations_handler,  # Añadir esta línea
 )
 from dotenv import load_dotenv
 from .utils.logging_config import setup_logging
@@ -60,6 +61,9 @@ def run_bot():
     application.add_handler(
         CommandHandler("config", config_handler)
     )  # Handle /config command
+    application.add_handler(
+        CommandHandler("variations", variations_handler)
+    )  # Añadir esta línea
     logging.info("Command handlers registered")
 
     # Register error handler
