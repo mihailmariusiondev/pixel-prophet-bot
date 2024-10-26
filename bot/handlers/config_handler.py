@@ -3,7 +3,9 @@ from telegram.ext import ContextTypes
 from ..services.replicate_service import ReplicateService
 import json
 import logging
-from ..utils import user_configs
+from ..utils import Database
+
+db = Database()
 
 
 async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -14,7 +16,7 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         # Si no hay argumentos, mostrar la configuración actual
         if not args:
-            config = user_configs.get(user_id, ReplicateService.default_params)
+            config = db.get_user_config(user_id, ReplicateService.default_params)
             message = (
                 "🛠️ *Configuración actual:*\n\n"
                 f"`{json.dumps(config, indent=2)}`\n\n"
@@ -37,7 +39,7 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         param, value = args[0], args[1]
 
         # Obtener la configuración actual del usuario o usar la predeterminada
-        config = user_configs.get(user_id, ReplicateService.default_params.copy())
+        config = db.get_user_config(user_id, ReplicateService.default_params.copy())
         old_value = config.get(param)
 
         # Verificar que el parámetro existe
@@ -67,7 +69,7 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # Actualizar la configuración
         config[param] = value
-        user_configs[user_id] = config
+        db.set_user_config(user_id, config)
 
         # Escapar caracteres especiales para MarkdownV2
         old_value_str = str(old_value).replace(".", "\\.").replace("-", "\\-")

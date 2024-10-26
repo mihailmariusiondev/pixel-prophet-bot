@@ -5,7 +5,9 @@ from pathlib import Path
 import urllib.request
 from datetime import datetime
 import json
-from ..utils.config import user_configs, last_generations
+from ..utils import Database
+
+db = Database()
 
 
 class ReplicateService:
@@ -94,27 +96,31 @@ class ReplicateService:
             return False
 
     @staticmethod
-    async def generate_image(prompt, user_id=None, store_params=True, custom_params=None):
+    async def generate_image(
+        prompt, user_id=None, store_params=True, custom_params=None
+    ):
         try:
             logging.info(f"Iniciando generación de imagen para prompt: {prompt}")
-
             if custom_params:
                 input_params = custom_params
                 logging.info(f"Usando parámetros personalizados: {input_params}")
             else:
                 # Obtener configuración del usuario
-                if user_id is not None and user_id in user_configs:
-                    input_params = user_configs[user_id].copy()
-                    logging.info(f"Usando configuración personalizada para usuario {user_id}: {input_params}")
+                if user_id is not None:
+                    input_params = db.get_user_config(
+                        user_id, ReplicateService.default_params.copy()
+                    )
+                    logging.info(
+                        f"Usando configuración personalizada para usuario {user_id}: {input_params}"
+                    )
                 else:
                     input_params = ReplicateService.default_params.copy()
                     logging.info("Usando configuración predeterminada")
-
                 input_params["prompt"] = prompt
 
             # Almacenar los parámetros si store_params es True
             if store_params and user_id is not None:
-                last_generations[user_id] = input_params.copy()
+                db.set_last_generation(user_id, input_params)
 
             output = await replicate.async_run(
                 "mihailmariusiondev/marius-flux:422d4bddab17dadb069e1956009fd55d58ba6c8fd5c8d4a071241b36a7cba3c7",

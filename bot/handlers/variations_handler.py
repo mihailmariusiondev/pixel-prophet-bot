@@ -1,17 +1,20 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 from ..services.replicate_service import ReplicateService
-from ..utils.config import last_generations  # Importar desde config
+from ..utils.database import Database
 import logging
 import random
-import json
+
+db = Database()
+
 
 async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle the /variations command to generate variations of the last prompt"""
     user_id = update.effective_user.id
 
     # Verificar si existe una generación previa
-    if not last_generations or user_id not in last_generations:
+    last_gen = db.get_last_generation(user_id)
+    if not last_gen:
         await update.message.reply_text(
             "❌ No hay una generación previa. Primero usa /generate para crear una imagen."
         )
@@ -19,7 +22,7 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     try:
         # Obtener los parámetros de la última generación
-        params = last_generations[user_id].copy()
+        params = last_gen.copy()
         prompt = params["prompt"]
         shortened_prompt = prompt[:100] + "..." if len(prompt) > 100 else prompt
 
@@ -44,7 +47,7 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 prompt,
                 user_id=user_id,
                 store_params=False,
-                custom_params=variation_params
+                custom_params=variation_params,
             )
 
             if result and isinstance(result, tuple):
@@ -58,7 +61,9 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                     f"⚙️ Parameters:\n"
                     f"```json\n{input_params}\n```"
                 )
-                await update.message.reply_text(variation_message, parse_mode="Markdown")
+                await update.message.reply_text(
+                    variation_message, parse_mode="Markdown"
+                )
             else:
                 await update.message.reply_text(
                     f"❌ Error generando la variación {i+1}/3. Continuando con la siguiente..."
