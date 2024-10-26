@@ -5,7 +5,7 @@ from pathlib import Path
 import urllib.request
 from datetime import datetime
 import json
-from ..utils import user_configs
+from ..utils.config import user_configs
 
 
 class ReplicateService:
@@ -98,10 +98,14 @@ class ReplicateService:
         try:
             logging.info(f"Iniciando generación de imagen para prompt: {prompt}")
 
-            # Usar configuración personalizada si existe, sino usar la predeterminada
-            input_params = user_configs.get(
-                user_id, ReplicateService.default_params.copy()
-            )
+            # Obtener configuración del usuario
+            if user_id is not None and user_id in user_configs:
+                input_params = user_configs[user_id].copy()
+                logging.info(f"Usando configuración personalizada para usuario {user_id}: {input_params}")
+            else:
+                input_params = ReplicateService.default_params.copy()
+                logging.info("Usando configuración predeterminada")
+
             input_params["prompt"] = prompt
 
             output = await replicate.async_run(

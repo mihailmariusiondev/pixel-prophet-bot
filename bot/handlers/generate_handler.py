@@ -34,8 +34,8 @@ async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Crear un mensaje de estado
     message = await update.message.reply_text(f"{prompt}\n> En cola...")
 
-    # Agregar el prompt y mensaje a la cola
-    user_queues[user_id].append((prompt, message))
+    # Agregar el prompt, mensaje y user_id a la cola
+    user_queues[user_id].append((prompt, message, user_id))  # Añadido user_id
 
     # Si no hay procesamiento activo, iniciar uno
     if not processing_status[user_id]:
@@ -49,14 +49,14 @@ async def process_next_prompt(user_id):
         return
 
     processing_status[user_id] = True
-    prompt, message = user_queues[user_id].popleft()
+    prompt, message, user_id = user_queues[user_id].popleft()  # Obtener también user_id
 
     try:
         # Actualizar mensaje a "Generando..."
         await message.edit_text(f"{prompt}\n> Generando...")
 
-        # Generar la imagen
-        result = await ReplicateService.generate_image(prompt)
+        # Generar la imagen pasando el user_id
+        result = await ReplicateService.generate_image(prompt, user_id=user_id)  # Pasar user_id
 
         if result and isinstance(result, tuple):
             image_url, prediction_id, input_params = result
