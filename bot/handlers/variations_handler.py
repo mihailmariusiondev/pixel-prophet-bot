@@ -52,10 +52,8 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
             if result and isinstance(result, tuple):
                 image_url, prediction_id, input_params = result
-                # Enviar cada variación inmediatamente
                 variation_message = (
-                    f"🎨 Variación {i+1}/3:\n"
-                    f"Prompt: {shortened_prompt}\n\n"
+                    f"🎨 Variación {i+1}/3:\n\n"
                     f"🔗 Image: {image_url}\n"
                     f"📋 Prediction: https://replicate.com/p/{prediction_id}\n\n"
                     f"⚙️ Parameters:\n"

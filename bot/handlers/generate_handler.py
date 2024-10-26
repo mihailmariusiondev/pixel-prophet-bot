@@ -55,10 +55,7 @@ async def process_next_prompt(user_id):
         result = await ReplicateService.generate_image(prompt, user_id=user_id)
         if result and isinstance(result, tuple):
             image_url, prediction_id, input_params = result
-            # Limitar el prompt a 100 caracteres y añadir "..." si es más largo
-            shortened_prompt = prompt[:100] + "..." if len(prompt) > 100 else prompt
             detailed_message = (
-                f"🎨 Prompt: {shortened_prompt}\n\n"
                 f"🔗 Image: {image_url}\n"
                 f"📋 Prediction: https://replicate.com/p/{prediction_id}\n\n"
                 f"⚙️ Parameters:\n"

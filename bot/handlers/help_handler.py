@@ -8,6 +8,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/start - Inicia el bot y muestra el mensaje de bienvenida\n"
         "/generate [descripción] - Genera una imagen basada en tu descripción\n"
         "/variations - Genera 3 variaciones de la última imagen generada\n"
+        "/last_generation - Muestra los detalles de tu última generación\n"
         "/download - Descarga todas las imágenes generadas a OneDrive\n"
         "/config - Ver o modificar parámetros de generación\n"
         "/about - Muestra información sobre el bot y su creador\n"
