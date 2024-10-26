@@ -49,20 +49,16 @@ async def process_next_prompt(user_id):
         return
 
     processing_status[user_id] = True
-    prompt, message, user_id = user_queues[user_id].popleft()  # Obtener también user_id
-
+    prompt, message, user_id = user_queues[user_id].popleft()
     try:
-        # Actualizar mensaje a "Generando..."
-        await message.edit_text(f"{prompt}\n> Generando...")
-
-        # Generar la imagen pasando el user_id
-        result = await ReplicateService.generate_image(prompt, user_id=user_id)  # Pasar user_id
-
+        await message.edit_text(f"Generando...")
+        result = await ReplicateService.generate_image(prompt, user_id=user_id)
         if result and isinstance(result, tuple):
             image_url, prediction_id, input_params = result
-            # Crear mensaje detallado
+            # Limitar el prompt a 100 caracteres y añadir "..." si es más largo
+            shortened_prompt = prompt[:100] + "..." if len(prompt) > 100 else prompt
             detailed_message = (
-                f"🎨 Prompt: {prompt}\n\n"
+                f"🎨 Prompt: {shortened_prompt}\n\n"
                 f"🔗 Image: {image_url}\n"
                 f"📋 Prediction: https://replicate.com/p/{prediction_id}\n\n"
                 f"⚙️ Parameters:\n"
@@ -80,5 +76,4 @@ async def process_next_prompt(user_id):
             "Ocurrió un error inesperado. Por favor, intenta de nuevo más tarde."
         )
     finally:
-        # Procesar el siguiente prompt en la cola
         await process_next_prompt(user_id)
