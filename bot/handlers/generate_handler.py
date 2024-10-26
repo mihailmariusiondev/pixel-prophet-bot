@@ -1,12 +1,14 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 from ..services.replicate_service import ReplicateService
-import asyncio
 import logging
+from collections import deque
 
 
-# Diccionario para almacenar las tareas en proceso
-active_tasks = {}
+# Diccionario para almacenar las colas de prompts por usuario
+user_queues = {}
+# Diccionario para rastrear si un usuario está procesando actualmente
+processing_status = {}
 
 
 async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -22,48 +24,52 @@ async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # Enviar mensaje de "Generando..."
-    message = await update.message.reply_text(f"{prompt}\n> Generando...")
-
-    # Crear la tarea y almacenarla
     user_id = update.effective_user.id
-    if user_id not in active_tasks:
-        active_tasks[user_id] = []
 
-    # Crear y almacenar la nueva tarea
-    task = asyncio.create_task(ReplicateService.generate_image(prompt))
-    active_tasks[user_id].append((task, message, prompt))
+    # Inicializar la cola del usuario si no existe
+    if user_id not in user_queues:
+        user_queues[user_id] = deque()
+        processing_status[user_id] = False
 
-    # Configurar callback para cuando la tarea termine
-    task.add_done_callback(
-        lambda t: asyncio.create_task(
-            handle_task_completion(t, message, prompt, user_id)
-        )
-    )
+    # Crear un mensaje de estado
+    message = await update.message.reply_text(f"{prompt}\n> En cola...")
+
+    # Agregar el prompt y mensaje a la cola
+    user_queues[user_id].append((prompt, message))
+
+    # Si no hay procesamiento activo, iniciar uno
+    if not processing_status[user_id]:
+        await process_next_prompt(user_id)
 
 
-async def handle_task_completion(task, message, prompt, user_id):
+async def process_next_prompt(user_id):
+    """Procesa el siguiente prompt en la cola del usuario"""
+    if not user_queues[user_id]:
+        processing_status[user_id] = False
+        return
+
+    processing_status[user_id] = True
+    prompt, message = user_queues[user_id].popleft()
+
     try:
-        image_url = await task
+        # Actualizar mensaje a "Generando..."
+        await message.edit_text(f"{prompt}\n> Generando...")
+
+        # Generar la imagen
+        image_url = await ReplicateService.generate_image(prompt)
+
         if image_url:
-            logging.info(f"Imagen generada exitosamente: {image_url}")
             await message.edit_text(f"{prompt}\n{image_url}")
         else:
-            logging.error(f"No se pudo generar la imagen para el prompt: {prompt}")
             await message.edit_text(
                 "Lo siento, hubo un error al generar la imagen. "
                 "Por favor, verifica que tu prompt sea apropiado y no contenga contenido prohibido."
             )
-    except asyncio.CancelledError:
-        logging.warning(f"Tarea cancelada para el prompt: {prompt}")
-        await message.edit_text("La generación de imagen fue cancelada.")
     except Exception as e:
-        logging.error(f"Error en handle_task_completion: {e}", exc_info=True)
+        logging.error(f"Error procesando prompt: {e}", exc_info=True)
         await message.edit_text(
             "Ocurrió un error inesperado. Por favor, intenta de nuevo más tarde."
         )
     finally:
-        # Limpiar la tarea completada
-        active_tasks[user_id] = [(t, m, p) for t, m, p in active_tasks[user_id] if t != task]
-        if not active_tasks[user_id]:
-            del active_tasks[user_id]
+        # Procesar el siguiente prompt en la cola
+        await process_next_prompt(user_id)
