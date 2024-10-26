@@ -6,6 +6,7 @@ from pathlib import Path
 import urllib.request
 import hashlib
 from datetime import datetime
+import json
 
 
 class ReplicateService:
@@ -82,23 +83,26 @@ class ReplicateService:
     async def generate_image(prompt):
         try:
             logging.info(f"Iniciando generación de imagen para prompt: {prompt}")
+            input_params = {
+                "seed": 42,
+                "model": "dev",
+                "prompt": prompt,
+                "lora_scale": 1,
+                "num_outputs": 1,
+                "aspect_ratio": "4:5",
+                "output_format": "jpg",
+                "guidance_scale": 0,
+                "output_quality": 100,
+                "prompt_strength": 0.8,
+                "extra_lora_scale": 1,
+                "num_inference_steps": 28,
+            }
+
             output = await replicate.async_run(
                 "mihailmariusiondev/marius-flux:422d4bddab17dadb069e1956009fd55d58ba6c8fd5c8d4a071241b36a7cba3c7",
-                input={
-                    "seed": 42,
-                    "model": "dev",
-                    "prompt": prompt,
-                    "lora_scale": 1,
-                    "num_outputs": 1,
-                    "aspect_ratio": "4:5",
-                    "output_format": "jpg",
-                    "guidance_scale": 0,
-                    "output_quality": 100,
-                    "prompt_strength": 0.8,
-                    "extra_lora_scale": 1,
-                    "num_inference_steps": 28,
-                },
+                input=input_params,
             )
+
             logging.info(f"Respuesta de Replicate: {output}")
             if not output:
                 logging.error("Replicate devolvió una respuesta vacía")
@@ -107,12 +111,16 @@ class ReplicateService:
             # Get the prediction object for the generated image
             predictions_page = replicate.predictions.list()
             if predictions_page.results:
-                latest_prediction = predictions_page.results[
-                    0
-                ]  # Get first result from the page
+                latest_prediction = predictions_page.results[0]
                 # Download the generated image
                 await ReplicateService.download_prediction(latest_prediction)
-                return output[0]  # Return the URL for Telegram
+
+                # Return tuple with image URL, prediction ID, and input parameters
+                return (
+                    output[0],  # image URL
+                    latest_prediction.id,  # prediction ID
+                    json.dumps(input_params, indent=2),  # formatted JSON string
+                )
             else:
                 logging.error("No predictions found")
                 return None

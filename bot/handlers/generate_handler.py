@@ -56,10 +56,19 @@ async def process_next_prompt(user_id):
         await message.edit_text(f"{prompt}\n> Generando...")
 
         # Generar la imagen
-        image_url = await ReplicateService.generate_image(prompt)
+        result = await ReplicateService.generate_image(prompt)
 
-        if image_url:
-            await message.edit_text(f"{prompt}\n{image_url}")
+        if result and isinstance(result, tuple):
+            image_url, prediction_id, input_params = result
+            # Crear mensaje detallado
+            detailed_message = (
+                f"🎨 Prompt: {prompt}\n\n"
+                f"🔗 Image: {image_url}\n"
+                f"📋 Prediction: https://replicate.com/p/{prediction_id}\n\n"
+                f"⚙️ Parameters:\n"
+                f"```json\n{input_params}\n```"
+            )
+            await message.edit_text(detailed_message, parse_mode="Markdown")
         else:
             await message.edit_text(
                 "Lo siento, hubo un error al generar la imagen. "
