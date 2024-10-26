@@ -85,6 +85,8 @@ class ReplicateService:
             output = await replicate.async_run(
                 "mihailmariusiondev/marius-flux:422d4bddab17dadb069e1956009fd55d58ba6c8fd5c8d4a071241b36a7cba3c7",
                 input={
+                    "seed": 42,
+                    "model": "dev",
                     "prompt": prompt,
                     "lora_scale": 1,
                     "num_outputs": 1,
@@ -105,7 +107,9 @@ class ReplicateService:
             # Get the prediction object for the generated image
             predictions_page = replicate.predictions.list()
             if predictions_page.results:
-                latest_prediction = predictions_page.results[0]  # Get first result from the page
+                latest_prediction = predictions_page.results[
+                    0
+                ]  # Get first result from the page
                 # Download the generated image
                 await ReplicateService.download_prediction(latest_prediction)
                 return output[0]  # Return the URL for Telegram
