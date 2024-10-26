@@ -16,8 +16,7 @@ class ReplicateService:
             # Convertir el string de fecha a objeto datetime
             # El formato de Replicate es: "2024-03-20T14:30:22.907244Z"
             created_at = datetime.strptime(
-                prediction.created_at.split(".")[0],
-                "%Y-%m-%dT%H:%M:%S"
+                prediction.created_at.split(".")[0], "%Y-%m-%dT%H:%M:%S"
             )
 
             # Formatear la fecha
@@ -25,7 +24,9 @@ class ReplicateService:
 
             # Limpiar el prompt (primeros 30 caracteres)
             prompt = prediction.input.get("prompt", "unknown_prompt")
-            clean_prompt = "".join(c if c.isalnum() else "_" for c in prompt[:30]).rstrip("_")
+            clean_prompt = "".join(
+                c if c.isalnum() else "_" for c in prompt[:30]
+            ).rstrip("_")
 
             # Crear nombre: fecha_id_prompt.jpg
             return f"{date_str}_{prediction.id}_{clean_prompt}.jpg"
@@ -40,7 +41,13 @@ class ReplicateService:
         """Download a prediction image if it doesn't already exist"""
         try:
             # Define the OneDrive path
-            onedrive_path = Path(os.path.expanduser("~")) / "OneDrive" / "_Areas" / "Astria" / "Replicate"
+            onedrive_path = (
+                Path(os.path.expanduser("~"))
+                / "OneDrive"
+                / "_Areas"
+                / "Astria"
+                / "Replicate"
+            )
 
             # Create directory if it doesn't exist
             onedrive_path.mkdir(parents=True, exist_ok=True)
@@ -55,7 +62,11 @@ class ReplicateService:
                 return True
 
             # Get the URL from prediction output
-            url = prediction.output[0] if isinstance(prediction.output, list) else prediction.output
+            url = (
+                prediction.output[0]
+                if isinstance(prediction.output, list)
+                else prediction.output
+            )
 
             # Download the file
             logging.info(f"Downloading image to: {full_path}")
@@ -135,7 +146,7 @@ class ReplicateService:
             sorted_predictions = sorted(
                 all_predictions,
                 key=lambda x: x.created_at,
-                reverse=True  # True = más reciente primero
+                reverse=True,  # True = más reciente primero
             )
 
             # Procesar predicciones ordenadas
@@ -143,7 +154,9 @@ class ReplicateService:
                 if prediction.status == "succeeded" and prediction.output:
                     if await ReplicateService.download_prediction(prediction):
                         count += 1
-                        logging.info(f"Downloaded {count} of {len(sorted_predictions)} predictions")
+                        logging.info(
+                            f"Downloaded {count} of {len(sorted_predictions)} predictions"
+                        )
 
             logging.info(f"Successfully downloaded {count} predictions from all pages")
             return count
