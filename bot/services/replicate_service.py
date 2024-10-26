@@ -103,13 +103,15 @@ class ReplicateService:
                 return None
 
             # Get the prediction object for the generated image
-            predictions = replicate.predictions.list()
-            latest_prediction = next(predictions)  # Get the most recent prediction
-
-            # Download the generated image
-            await ReplicateService.download_prediction(latest_prediction)
-
-            return output[0]  # Return the URL for Telegram
+            predictions_page = replicate.predictions.list()
+            if predictions_page.results:
+                latest_prediction = predictions_page.results[0]  # Get first result from the page
+                # Download the generated image
+                await ReplicateService.download_prediction(latest_prediction)
+                return output[0]  # Return the URL for Telegram
+            else:
+                logging.error("No predictions found")
+                return None
 
         except replicate.exceptions.ReplicateError as e:
             logging.error(f"Error de Replicate: {e}")
