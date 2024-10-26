@@ -1,4 +1,4 @@
-name: replicate-farm-bot
+name: pixel-prophet-bot
 channels:
   - defaults
   - conda-forge
