@@ -1,15 +1,29 @@
 import replicate
-import asyncio
 import logging
 import os
 from pathlib import Path
 import urllib.request
-import hashlib
 from datetime import datetime
 import json
+from ..utils import user_configs
 
 
 class ReplicateService:
+    # Parámetros predeterminados
+    default_params = {
+        "seed": 42,
+        "model": "dev",
+        "lora_scale": 1,
+        "num_outputs": 1,
+        "aspect_ratio": "4:5",
+        "output_format": "jpg",
+        "guidance_scale": 0,
+        "output_quality": 100,
+        "prompt_strength": 0.8,
+        "extra_lora_scale": 1,
+        "num_inference_steps": 28,
+    }
+
     @staticmethod
     def get_image_filename(prediction) -> str:
         """Generate a filename based on creation date, ID and prompt"""
@@ -80,23 +94,15 @@ class ReplicateService:
             return False
 
     @staticmethod
-    async def generate_image(prompt):
+    async def generate_image(prompt, user_id=None):
         try:
             logging.info(f"Iniciando generación de imagen para prompt: {prompt}")
-            input_params = {
-                "seed": 42,
-                "model": "dev",
-                "prompt": prompt,
-                "lora_scale": 1,
-                "num_outputs": 1,
-                "aspect_ratio": "4:5",
-                "output_format": "jpg",
-                "guidance_scale": 0,
-                "output_quality": 100,
-                "prompt_strength": 0.8,
-                "extra_lora_scale": 1,
-                "num_inference_steps": 28,
-            }
+
+            # Usar configuración personalizada si existe, sino usar la predeterminada
+            input_params = user_configs.get(
+                user_id, ReplicateService.default_params.copy()
+            )
+            input_params["prompt"] = prompt
 
             output = await replicate.async_run(
                 "mihailmariusiondev/marius-flux:422d4bddab17dadb069e1956009fd55d58ba6c8fd5c8d4a071241b36a7cba3c7",

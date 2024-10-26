@@ -7,7 +7,8 @@ from .handlers import (
     about_handler,
     error_handler,
     generate_handler,
-    download_handler,  # Añade esta línea
+    download_handler,
+    config_handler,  # Añadir esta línea
 )
 from dotenv import load_dotenv
 from .utils.logging_config import setup_logging
@@ -56,6 +57,9 @@ def run_bot():
     application.add_handler(
         CommandHandler("download", download_handler)
     )  # Handle /download command
+    application.add_handler(
+        CommandHandler("config", config_handler)
+    )  # Handle /config command
     logging.info("Command handlers registered")
 
     # Register error handler

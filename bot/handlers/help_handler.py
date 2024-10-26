@@ -8,10 +8,15 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/start - Inicia el bot y muestra el mensaje de bienvenida\n"
         "/generate [descripción] - Genera una imagen basada en tu descripción\n"
         "/download - Descarga todas las imágenes generadas a OneDrive\n"
+        "/config - Ver o modificar parámetros de generación\n"
         "/about - Muestra información sobre el bot y su creador\n"
         "/help - Muestra este mensaje de ayuda\n\n"
         "Para generar una imagen, simplemente usa /generate seguido de tu descripción.\n"
         "Ejemplo: /generate un paisaje futurista con rascacielos flotantes\n\n"
-        "¡Experimenta con diferentes descripciones y deja volar tu imaginación!"
+        "Para configurar parámetros:\n"
+        "/config - Muestra la configuración actual\n"
+        "/config [parámetro] [valor] - Modifica un parámetro\n"
+        "Ejemplo: /config seed 42\n\n"
+        "¡Experimenta con diferentes descripciones y configuraciones!"
     )
     await update.message.reply_text(help_text)
