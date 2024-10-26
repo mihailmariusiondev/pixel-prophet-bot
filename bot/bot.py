@@ -6,7 +6,8 @@ from .handlers import (
     help_handler,
     about_handler,
     error_handler,
-    generate_handler,  # Añadimos el nuevo manejador
+    generate_handler,
+    download_handler,  # Añade esta línea
 )
 from dotenv import load_dotenv
 from .utils.logging_config import setup_logging
@@ -52,6 +53,9 @@ def run_bot():
     application.add_handler(
         CommandHandler("generate", generate_handler)
     )  # Handle /generate command
+    application.add_handler(
+        CommandHandler("download", download_handler)
+    )  # Handle /download command
     logging.info("Command handlers registered")
 
     # Register error handler
