@@ -19,37 +19,29 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     params = db.get_user_config(user_id, ReplicateService.default_params.copy())
     logging.debug(f"Retrieved user config for {user_id}: {params}")
 
-    # Check if a prediction ID was provided
     if context.args:
         prediction_id = context.args[0]
         logging.info(f"Generating variations for specific prediction: {prediction_id}")
-        try:
-            # Get the specific prediction
-            prediction = replicate.predictions.get(prediction_id)
-            logging.debug(f"Retrieved prediction data: {prediction.id}")
 
-            # Add logging for data removal check
-            if not prediction.input or not prediction.output:
-                logging.warning(f"Prediction data unavailable for ID: {prediction_id}")
-                await update.message.reply_text(
-                    "❌ Los datos de esta predicción ya no están disponibles.\n"
-                    "Replicate elimina automáticamente los datos después de una hora.\n"
-                    "Por favor, usa una generación más reciente o crea una nueva."
-                )
-                return
+        # Get prediction data from local storage or API
+        prediction_data = await ReplicateService.get_prediction_data(prediction_id)
 
-            params["prompt"] = prediction.input.get("prompt")
-            if not params["prompt"]:
-                await update.message.reply_text(
-                    "❌ No se pudo obtener el prompt de la predicción."
-                )
-                return
-
-        except Exception as e:
-            logging.error(f"Error getting prediction: {e}", exc_info=True)
+        if not prediction_data:
+            logging.warning(f"No data found for prediction {prediction_id}")
             await update.message.reply_text(
-                "❌ Error al obtener la predicción. "
-                "Verifica el ID o usa una generación más reciente."
+                "❌ No se encontraron datos para esta predicción.\n"
+                "Los datos pueden haber sido eliminados de Replicate.\n"
+                "Por favor, usa una generación más reciente o crea una nueva."
+            )
+            return
+
+        params["prompt"] = prediction_data.get("prompt") or prediction_data.input.get("prompt")
+        logging.debug(f"Retrieved prompt for variation: {params['prompt']}")
+
+        if not params["prompt"]:
+            logging.error(f"Could not extract prompt from prediction {prediction_id}")
+            await update.message.reply_text(
+                "❌ No se pudo obtener el prompt de la predicción."
             )
             return
     else:

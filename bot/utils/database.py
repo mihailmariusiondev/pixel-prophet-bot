@@ -26,14 +26,32 @@ class Database:
                 cursor = conn.cursor()
                 # User configurations table with automatic timestamp updates
                 # Stores JSON-serialized config data for flexibility
-                cursor.execute("""
+                cursor.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS user_configs (
                         user_id INTEGER PRIMARY KEY,
                         config TEXT NOT NULL,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
-                """)
+                """
+                )
+
+                # New table for storing predictions with detailed tracking
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS predictions (
+                        prediction_id TEXT PRIMARY KEY,
+                        user_id INTEGER,
+                        prompt TEXT,
+                        input_params TEXT,
+                        output_url TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES user_configs(user_id)
+                    )
+                """
+                )
                 conn.commit()
+
         except Exception as e:
             logging.error(f"Error initializing database: {e}")
             raise
@@ -129,3 +147,63 @@ class Database:
         except Exception as e:
             logging.error(f"Error setting last generation: {e}")
             raise
+
+    def save_prediction(self, prediction_id, user_id, prompt, input_params, output_url):
+        """
+        Save prediction data for future reference
+        Args:
+            prediction_id: Unique identifier from Replicate
+            user_id: Telegram user ID
+            prompt: Original text prompt
+            input_params: JSON string of generation parameters
+            output_url: URL of generated image
+        """
+        try:
+            logging.info(f"Saving prediction data for ID: {prediction_id}")
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    INSERT INTO predictions
+                    (prediction_id, user_id, prompt, input_params, output_url)
+                    VALUES (?, ?, ?, ?, ?)
+                """,
+                    (prediction_id, user_id, prompt, input_params, output_url),
+                )
+                conn.commit()
+                logging.debug(
+                    f"Successfully saved prediction {prediction_id} for user {user_id}"
+                )
+        except Exception as e:
+            logging.error(f"Error saving prediction: {e}", exc_info=True)
+            raise
+
+    def get_prediction(self, prediction_id):
+        """
+        Retrieve prediction data by ID
+        Args:
+            prediction_id: Unique identifier from Replicate
+        Returns:
+            tuple: (prompt, input_params, output_url) or None if not found
+        """
+        try:
+            logging.debug(f"Retrieving prediction data for ID: {prediction_id}")
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT prompt, input_params, output_url
+                    FROM predictions
+                    WHERE prediction_id = ?
+                """,
+                    (prediction_id,),
+                )
+                result = cursor.fetchone()
+                if result:
+                    logging.debug(f"Found prediction data for ID: {prediction_id}")
+                else:
+                    logging.debug(f"No prediction data found for ID: {prediction_id}")
+                return result
+        except Exception as e:
+            logging.error(f"Error retrieving prediction: {e}", exc_info=True)
+            return None

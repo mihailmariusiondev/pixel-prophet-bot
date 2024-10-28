@@ -167,6 +167,15 @@ class ReplicateService:
                 latest_prediction = predictions_page.results[0]
                 logging.info(f"Retrieved prediction ID: {latest_prediction.id}")
 
+                # Store prediction data in database
+                db.save_prediction(
+                    prediction_id=latest_prediction.id,
+                    user_id=user_id,
+                    prompt=prompt,
+                    input_params=json.dumps(input_params),
+                    output_url=output[0]
+                )
+
                 # Download the generated image
                 logging.debug("Initiating image download")
                 await ReplicateService.download_prediction(latest_prediction)
@@ -231,3 +240,40 @@ class ReplicateService:
         except Exception as e:
             logging.error(f"Error downloading predictions: {e}", exc_info=True)
             raise
+
+    @staticmethod
+    async def get_prediction_data(prediction_id):
+        """
+        Get prediction data from local database or Replicate API
+        Args:
+            prediction_id: Unique identifier for the prediction
+        Returns:
+            dict: Prediction data including prompt, input params, and output URL
+            None: If prediction not found or error occurs
+        """
+        try:
+            logging.info(f"Retrieving prediction data for ID: {prediction_id}")
+
+            # First try local database
+            local_data = db.get_prediction(prediction_id)
+            if local_data:
+                logging.debug(f"Found prediction {prediction_id} in local database")
+                prompt, input_params, output_url = local_data
+                return {
+                    'prompt': prompt,
+                    'input': json.loads(input_params),
+                    'output': output_url
+                }
+
+            # If not found locally, try Replicate API
+            logging.debug(f"Prediction {prediction_id} not found locally, trying Replicate API")
+            prediction = replicate.predictions.get(prediction_id)
+            if prediction.status == "succeeded":
+                logging.debug(f"Found prediction {prediction_id} in Replicate API")
+                return prediction
+
+            logging.warning(f"Prediction {prediction_id} not found in either location")
+            return None
+        except Exception as e:
+            logging.error(f"Error retrieving prediction data: {e}", exc_info=True)
+            return None
