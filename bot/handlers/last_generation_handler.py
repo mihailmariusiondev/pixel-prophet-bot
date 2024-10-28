@@ -10,20 +10,14 @@ db = Database()
 
 
 async def last_generation_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """
-    Retrieves and displays the most recent image generation for the user.
-    Fetches data from Replicate API and formats it for display.
-    Includes image URL, prediction ID, and generation parameters.
-    """
+    """Handle the /last_generation command to show details of the last generated image"""
     user_id = update.effective_user.id
     logging.info(f"Last generation request from user {user_id}")
 
     try:
-        # Fetch the most recent predictions from Replicate
         logging.debug("Fetching predictions from Replicate")
         predictions_page = replicate.predictions.list()
 
-        # Check if any predictions exist
         if not predictions_page.results:
             logging.warning("No predictions found in Replicate")
             await update.message.reply_text(
@@ -31,19 +25,15 @@ async def last_generation_handler(update: Update, context: ContextTypes.DEFAULT_
             )
             return
 
-        # Get the most recent prediction
         latest_prediction = predictions_page.results[0]
         logging.info(f"Retrieved latest prediction ID: {latest_prediction.id}")
 
-        # Extract image URL from prediction output
-        # Handle both list and single output formats
         image_url = (
             latest_prediction.output[0]
             if isinstance(latest_prediction.output, list)
             else latest_prediction.output
         )
 
-        # Format and send the generation details to user
         logging.debug(f"Formatting message for prediction {latest_prediction.id}")
         await update.message.reply_text(
             format_generation_message(
