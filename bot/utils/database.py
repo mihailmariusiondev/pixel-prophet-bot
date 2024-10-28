@@ -5,32 +5,51 @@ import logging
 
 
 class Database:
+    """
+    Handles all database operations for the bot, including user configurations
+    and generation history. Uses SQLite for persistent storage with automatic
+    timestamp tracking for updates.
+    """
+
     def __init__(self):
+        # Store database path as a Path object for cross-platform compatibility
         self.db_path = Path("bot_data.db")
         self.init_database()
 
     def init_database(self):
-        """Initialize the database with required tables"""
+        """
+        Initializes the database schema if it doesn't exist.
+        Creates tables with appropriate constraints and defaults.
+        """
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-                # Table for user configurations
-                cursor.execute(
-                    """
+                # User configurations table with automatic timestamp updates
+                # Stores JSON-serialized config data for flexibility
+                cursor.execute("""
                     CREATE TABLE IF NOT EXISTS user_configs (
                         user_id INTEGER PRIMARY KEY,
                         config TEXT NOT NULL,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
-                """
-                )
+                """)
                 conn.commit()
         except Exception as e:
             logging.error(f"Error initializing database: {e}")
             raise
 
     def get_user_config(self, user_id, default_config):
-        """Get user configuration or return default if not exists"""
+        """
+        Retrieves user-specific configuration or falls back to defaults.
+        Uses context manager for automatic connection handling.
+
+        Args:
+            user_id: Telegram user ID
+            default_config: Configuration to use if user has no saved config
+
+        Returns:
+            dict: User's configuration or default if none exists
+        """
         try:
             logging.debug(f"Retrieving config for user {user_id}")
             with sqlite3.connect(self.db_path) as conn:
@@ -52,7 +71,14 @@ class Database:
             return default_config
 
     def set_user_config(self, user_id, config):
-        """Save or update user configuration"""
+        """
+        Updates or creates user configuration using UPSERT pattern.
+        Automatically handles JSON serialization of config data.
+
+        Args:
+            user_id: Telegram user ID
+            config: Dictionary containing user's configuration
+        """
         try:
             logging.info(f"Updating config for user {user_id}")
             logging.debug(f"New config: {config}")

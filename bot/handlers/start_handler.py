@@ -4,9 +4,15 @@ import logging
 
 
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Initial entry point for new users interacting with the bot.
+    Provides a friendly welcome message and basic usage instructions.
+    """
     user_id = update.effective_user.id
     logging.info(f"New user started the bot: {user_id}")
 
+    # Multi-line welcome message using string concatenation for better readability
+    # Includes emoji for visual appeal and an example to help users get started
     welcome_text = (
         "¡Bienvenido a PixelProphetBot! 🎨✨\n\n"
         "Soy un bot que genera imágenes únicas basadas en tus descripciones de texto.\n\n"

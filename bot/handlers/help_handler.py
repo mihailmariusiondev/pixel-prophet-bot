@@ -4,9 +4,20 @@ import logging
 
 
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Provides comprehensive help information about bot commands and features.
+    Uses MarkdownV2 formatting for better readability and visual organization.
+    """
     user_id = update.effective_user.id
     logging.info(f"Help command received from user {user_id}")
 
+    # Structured help text using sections for better organization:
+    # - Main commands for core functionality
+    # - Configuration options for customization
+    # - Other commands for additional features
+    # - Examples for practical usage
+    # - Tips for advanced usage
+    # Note: Special characters are escaped for MarkdownV2 compatibility
     help_text = (
         "*🤖 Guía de PixelProphetBot*\n\n"
         "*Comandos principales:*\n"
@@ -31,6 +42,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     try:
+        # Use MarkdownV2 parse mode for rich text formatting
         await update.message.reply_text(help_text, parse_mode="MarkdownV2")
         logging.debug(f"Help message sent to user {user_id}")
     except Exception as e:

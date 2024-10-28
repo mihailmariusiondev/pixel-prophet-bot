@@ -11,24 +11,35 @@ db = Database()
 
 
 class ReplicateService:
-    # Parámetros predeterminados
+    """
+    Handles all interactions with the Replicate API for image generation.
+    Provides methods for generating images, downloading predictions,
+    and managing variations of existing images.
+    """
+
+    # Default parameters for image generation
+    # These values have been tuned for optimal results
     default_params = {
-        "seed": 42,
-        "model": "dev",
-        "lora_scale": 1,
-        "num_outputs": 1,
-        "aspect_ratio": "4:5",
-        "output_format": "jpg",
-        "guidance_scale": 0,
-        "output_quality": 100,
-        "prompt_strength": 0.8,
-        "extra_lora_scale": 1,
-        "num_inference_steps": 28,
+        "seed": 42,              # For reproducibility
+        "model": "dev",          # Model version
+        "lora_scale": 1,         # LoRA adaptation strength
+        "num_outputs": 1,        # Number of images to generate
+        "aspect_ratio": "4:5",   # Standard Instagram ratio
+        "output_format": "jpg",  # Compressed format for efficiency
+        "guidance_scale": 0,     # How closely to follow the prompt
+        "output_quality": 100,   # Maximum quality for saved images
+        "prompt_strength": 0.8,  # Balance between prompt and image
+        "extra_lora_scale": 1,   # Additional LoRA adjustment
+        "num_inference_steps": 28, # Balance between quality and speed
     }
 
     @staticmethod
     def get_image_filename(prediction) -> str:
-        """Generate a filename based on creation date, ID and prompt"""
+        """
+        Generates a standardized filename for saved images.
+        Format: date_id_prompt.jpg
+        Handles special characters and length limitations.
+        """
         try:
             # Convertir el string de fecha a objeto datetime
             # El formato de Replicate es: "2024-03-20T14:30:22.907244Z"
@@ -55,7 +66,16 @@ class ReplicateService:
 
     @staticmethod
     async def download_prediction(prediction) -> bool:
-        """Download a prediction image if it doesn't already exist"""
+        """
+        Downloads and saves prediction images to OneDrive.
+        Implements idempotency to avoid duplicate downloads.
+
+        Args:
+            prediction: Replicate prediction object
+
+        Returns:
+            bool: True if download successful or file exists
+        """
         try:
             # Define the OneDrive path
             onedrive_path = (
@@ -97,6 +117,18 @@ class ReplicateService:
 
     @staticmethod
     async def generate_image(prompt, user_id=None, custom_params=None):
+        """
+        Generates an image using the Replicate API.
+        Supports custom parameters and user-specific configurations.
+
+        Args:
+            prompt: Text description for image generation
+            user_id: Optional Telegram user ID for config lookup
+            custom_params: Optional override for generation parameters
+
+        Returns:
+            tuple: (image_url, prediction_id, parameters_json) or None on failure
+        """
         try:
             logging.info(
                 f"Starting image generation - User: {user_id}, Prompt: {prompt}"
