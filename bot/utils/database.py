@@ -13,7 +13,6 @@ class Database:
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-
                 # Table for user configurations
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS user_configs (
@@ -22,16 +21,6 @@ class Database:
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     )
                 """)
-
-                # Table for last generations
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS last_generations (
-                        user_id INTEGER PRIMARY KEY,
-                        params TEXT NOT NULL,
-                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                    )
-                """)
-
                 conn.commit()
         except Exception as e:
             logging.error(f"Error initializing database: {e}")

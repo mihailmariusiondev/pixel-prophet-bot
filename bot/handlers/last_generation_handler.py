@@ -12,14 +12,6 @@ db = Database()
 async def last_generation_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle the /last_generation command to show details of the last generated image"""
     try:
-        user_id = update.effective_user.id
-        last_gen = db.get_last_generation(user_id)
-        if not last_gen:
-            await update.message.reply_text(
-                "❌ No hay una generación previa. Primero usa /generate para crear una imagen."
-            )
-            return
-
         predictions_page = replicate.predictions.list()
         if not predictions_page.results:
             await update.message.reply_text(
@@ -36,11 +28,12 @@ async def last_generation_handler(update: Update, context: ContextTypes.DEFAULT_
 
         await update.message.reply_text(
             format_generation_message(
-                image_url, latest_prediction.id, json.dumps(last_gen, indent=2)
+                image_url,
+                latest_prediction.id,
+                json.dumps(latest_prediction.input, indent=2),
             ),
             parse_mode="Markdown",
         )
-
     except Exception as e:
         logging.error(f"Error en last_generation_handler: {e}", exc_info=True)
         await update.message.reply_text(

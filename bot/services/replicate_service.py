@@ -96,9 +96,7 @@ class ReplicateService:
             return False
 
     @staticmethod
-    async def generate_image(
-        prompt, user_id=None, store_params=True, custom_params=None
-    ):
+    async def generate_image(prompt, user_id=None, custom_params=None):
         try:
             logging.info(f"Iniciando generación de imagen para prompt: {prompt}")
             if custom_params:
@@ -118,15 +116,10 @@ class ReplicateService:
                     logging.info("Usando configuración predeterminada")
                 input_params["prompt"] = prompt
 
-            # Almacenar los parámetros si store_params es True
-            if store_params and user_id is not None:
-                db.set_last_generation(user_id, input_params)
-
             output = await replicate.async_run(
                 "mihailmariusiondev/marius-flux:422d4bddab17dadb069e1956009fd55d58ba6c8fd5c8d4a071241b36a7cba3c7",
                 input=input_params,
             )
-
             logging.info(f"Respuesta de Replicate: {output}")
             if not output:
                 logging.error("Replicate devolvió una respuesta vacía")
@@ -138,7 +131,6 @@ class ReplicateService:
                 latest_prediction = predictions_page.results[0]
                 # Download the generated image
                 await ReplicateService.download_prediction(latest_prediction)
-
                 # Return tuple with image URL, prediction ID, and input parameters
                 return (
                     output[0],  # image URL
@@ -148,7 +140,6 @@ class ReplicateService:
             else:
                 logging.error("No predictions found")
                 return None
-
         except replicate.exceptions.ReplicateError as e:
             logging.error(f"Error de Replicate: {e}")
             return None
