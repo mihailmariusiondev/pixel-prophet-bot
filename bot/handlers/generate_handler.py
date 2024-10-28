@@ -3,7 +3,7 @@ from telegram.ext import ContextTypes
 from ..services.replicate_service import ReplicateService
 import logging
 from collections import deque
-
+from ..utils.message_utils import format_generation_message
 
 # Diccionario para almacenar las colas de prompts por usuario
 user_queues = {}
@@ -12,12 +12,12 @@ processing_status = {}
 
 
 async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle the /generate command to create images from text"""
     prompt = (
         update.message.text.split(" ", 1)[1]
         if len(update.message.text.split(" ", 1)) > 1
         else ""
     )
-
     if not prompt:
         await update.message.reply_text(
             "Por favor, proporciona un prompt para generar la imagen."
@@ -25,7 +25,6 @@ async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     user_id = update.effective_user.id
-
     # Inicializar la cola del usuario si no existe
     if user_id not in user_queues:
         user_queues[user_id] = deque()
@@ -35,7 +34,7 @@ async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = await update.message.reply_text(f"{prompt}\n> En cola...")
 
     # Agregar el prompt, mensaje y user_id a la cola
-    user_queues[user_id].append((prompt, message, user_id))  # Añadido user_id
+    user_queues[user_id].append((prompt, message, user_id))
 
     # Si no hay procesamiento activo, iniciar uno
     if not processing_status[user_id]:
@@ -50,27 +49,25 @@ async def process_next_prompt(user_id):
 
     processing_status[user_id] = True
     prompt, message, user_id = user_queues[user_id].popleft()
+
     try:
-        await message.edit_text(f"Generando...")
+        await message.edit_text("⏳ Generando imagen...")
         result = await ReplicateService.generate_image(prompt, user_id=user_id)
+
         if result and isinstance(result, tuple):
             image_url, prediction_id, input_params = result
-            detailed_message = (
-                f"🔗 Image: {image_url}\n"
-                f"📋 Prediction: https://replicate.com/p/{prediction_id}\n\n"
-                f"⚙️ Parameters:\n"
-                f"```json\n{input_params}\n```"
+            await message.edit_text(
+                format_generation_message(image_url, prediction_id, input_params),
+                parse_mode="Markdown",
             )
-            await message.edit_text(detailed_message, parse_mode="Markdown")
         else:
             await message.edit_text(
-                "Lo siento, hubo un error al generar la imagen. "
-                "Por favor, verifica que tu prompt sea apropiado y no contenga contenido prohibido."
+                "❌ Error al generar la imagen. Por favor, verifica tu prompt e intenta nuevamente."
             )
     except Exception as e:
         logging.error(f"Error procesando prompt: {e}", exc_info=True)
         await message.edit_text(
-            "Ocurrió un error inesperado. Por favor, intenta de nuevo más tarde."
+            "❌ Ocurrió un error inesperado. Por favor, intenta más tarde."
         )
     finally:
         await process_next_prompt(user_id)

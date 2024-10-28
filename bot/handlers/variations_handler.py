@@ -4,44 +4,63 @@ from ..services.replicate_service import ReplicateService
 from ..utils.database import Database
 import logging
 import random
+import replicate
+from ..utils.message_utils import format_generation_message
 
 db = Database()
 
 
 async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle the /variations command to generate variations of the last prompt"""
+    """Handle the /variations command to generate variations of a specific prediction"""
     user_id = update.effective_user.id
 
-    # Verificar si existe una generación previa
-    last_gen = db.get_last_generation(user_id)
-    if not last_gen:
-        await update.message.reply_text(
-            "❌ No hay una generación previa. Primero usa /generate para crear una imagen."
-        )
-        return
+    # Get user's current config
+    params = db.get_user_config(user_id, ReplicateService.default_params.copy())
+
+    # Check if a prediction ID was provided
+    if context.args:
+        prediction_id = context.args[0]
+        try:
+            # Get the specific prediction
+            prediction = replicate.predictions.get(prediction_id)
+            if not prediction or not prediction.input:
+                await update.message.reply_text(
+                    "❌ No se pudo obtener la información de la predicción especificada."
+                )
+                return
+
+            # Only get the prompt from the prediction
+            params["prompt"] = prediction.input.get("prompt")
+            if not params["prompt"]:
+                await update.message.reply_text(
+                    "❌ No se pudo obtener el prompt de la predicción especificada."
+                )
+                return
+
+        except Exception as e:
+            logging.error(f"Error getting prediction: {e}", exc_info=True)
+            await update.message.reply_text(
+                "❌ No se pudo encontrar la predicción especificada. "
+                "Verifica el ID e intenta nuevamente."
+            )
+            return
+    else:
+        last_gen = db.get_last_generation(user_id)
+        if not last_gen or "prompt" not in last_gen:
+            await update.message.reply_text(
+                "❌ No hay una generación previa. Usa /generate primero o "
+                "proporciona un ID de predicción: /variations <prediction_id>"
+            )
+            return
+        params["prompt"] = last_gen["prompt"]
 
     try:
-        # Obtener los parámetros de la última generación
-        params = last_gen.copy()
         prompt = params["prompt"]
-        shortened_prompt = prompt[:100] + "..." if len(prompt) > 100 else prompt
+        status_message = await update.message.reply_text("⏳ Generando variaciones...")
 
-        # Mensaje inicial
-        status_message = await update.message.reply_text(
-            f"🎨 Generando 3 variaciones para:\n{shortened_prompt}\n\n> Iniciando..."
-        )
-
-        # Generar 3 variaciones con seeds aleatorios
         for i in range(3):
             variation_params = params.copy()
-            new_seed = random.randint(1, 1000000)
-            variation_params["seed"] = new_seed
-
-            # Actualizar mensaje de estado
-            await status_message.edit_text(
-                f"🎨 Generando variación {i+1}/3 para:\n{shortened_prompt}\n\n"
-                f"> Seed: {new_seed}"
-            )
+            variation_params["seed"] = random.randint(1, 1000000)
 
             result = await ReplicateService.generate_image(
                 prompt,
@@ -52,24 +71,18 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
             if result and isinstance(result, tuple):
                 image_url, prediction_id, input_params = result
-                variation_message = (
-                    f"🎨 Variación {i+1}/3:\n\n"
-                    f"🔗 Image: {image_url}\n"
-                    f"📋 Prediction: https://replicate.com/p/{prediction_id}\n\n"
-                    f"⚙️ Parameters:\n"
-                    f"```json\n{input_params}\n```"
-                )
                 await update.message.reply_text(
-                    variation_message, parse_mode="Markdown"
+                    format_generation_message(image_url, prediction_id, input_params),
+                    parse_mode="Markdown"
                 )
             else:
                 await update.message.reply_text(
-                    f"❌ Error generando la variación {i+1}/3. Continuando con la siguiente..."
+                    "❌ Error al generar la variación."
                 )
 
         # Mensaje final
         await status_message.edit_text(
-            f"✅ Proceso completado: 3 variaciones generadas para:\n{shortened_prompt}"
+            "✅ Proceso completado: 3 variaciones generadas."
         )
 
     except Exception as e:
