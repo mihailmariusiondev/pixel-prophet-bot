@@ -98,55 +98,61 @@ class ReplicateService:
     @staticmethod
     async def generate_image(prompt, user_id=None, custom_params=None):
         try:
-            logging.info(f"Iniciando generación de imagen para prompt: {prompt}")
+            logging.info(
+                f"Starting image generation - User: {user_id}, Prompt: {prompt}"
+            )
+
             if custom_params:
                 input_params = custom_params
-                logging.info(f"Usando parámetros personalizados: {input_params}")
+                logging.debug(f"Using custom parameters: {input_params}")
             else:
-                # Obtener configuración del usuario
                 if user_id is not None:
                     input_params = db.get_user_config(
                         user_id, ReplicateService.default_params.copy()
                     )
-                    logging.info(
-                        f"Usando configuración personalizada para usuario {user_id}: {input_params}"
-                    )
+                    logging.debug(f"Using user config for {user_id}: {input_params}")
                 else:
                     input_params = ReplicateService.default_params.copy()
-                    logging.info("Usando configuración predeterminada")
+                    logging.debug("Using default configuration")
+
                 input_params["prompt"] = prompt
 
+            logging.info("Sending request to Replicate API")
             output = await replicate.async_run(
                 "mihailmariusiondev/marius-flux:422d4bddab17dadb069e1956009fd55d58ba6c8fd5c8d4a071241b36a7cba3c7",
                 input=input_params,
             )
-            logging.info(f"Respuesta de Replicate: {output}")
+
             if not output:
-                logging.error("Replicate devolvió una respuesta vacía")
+                logging.error("Replicate returned empty response")
                 return None
 
-            # Get the prediction object for the generated image
+            logging.info("Successfully received response from Replicate")
+
+            # Get prediction details
             predictions_page = replicate.predictions.list()
             if predictions_page.results:
                 latest_prediction = predictions_page.results[0]
+                logging.info(f"Retrieved prediction ID: {latest_prediction.id}")
+
                 # Download the generated image
+                logging.debug("Initiating image download")
                 await ReplicateService.download_prediction(latest_prediction)
-                # Return tuple with image URL, prediction ID, and input parameters
+
                 return (
-                    output[0],  # image URL
-                    latest_prediction.id,  # prediction ID
-                    json.dumps(input_params, indent=2),  # formatted JSON string
+                    output[0],
+                    latest_prediction.id,
+                    json.dumps(input_params, indent=2),
                 )
             else:
-                logging.error("No predictions found")
+                logging.error("No predictions found in response")
                 return None
+
         except replicate.exceptions.ReplicateError as e:
-            logging.error(f"Error de Replicate: {e}")
+            logging.error(f"Replicate API error: {e}", exc_info=True)
             return None
         except Exception as e:
-            logging.error(
-                f"Error inesperado en la generación de imagen: {e}", exc_info=True
-            )
+            logging.error(f"Unexpected error in image generation: {e}", exc_info=True)
             return None
 
     @staticmethod

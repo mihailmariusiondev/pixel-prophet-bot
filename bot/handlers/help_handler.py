@@ -1,8 +1,12 @@
 from telegram import Update
 from telegram.ext import ContextTypes
+import logging
 
 
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    logging.info(f"Help command received from user {user_id}")
+
     help_text = (
         "*🤖 Guía de PixelProphetBot*\n\n"
         "*Comandos principales:*\n"
@@ -26,4 +30,10 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• Usa config para personalizar los parámetros de generación"
     )
 
-    await update.message.reply_text(help_text, parse_mode="MarkdownV2")
+    try:
+        await update.message.reply_text(help_text, parse_mode="MarkdownV2")
+        logging.debug(f"Help message sent to user {user_id}")
+    except Exception as e:
+        logging.error(
+            f"Error sending help message to user {user_id}: {e}", exc_info=True
+        )

@@ -13,18 +13,24 @@ db = Database()
 async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle the /variations command to generate variations of a specific prediction"""
     user_id = update.effective_user.id
+    logging.info(f"Variations requested by user {user_id}")
+
     # Get user's current config
     params = db.get_user_config(user_id, ReplicateService.default_params.copy())
+    logging.debug(f"Retrieved user config for {user_id}: {params}")
 
     # Check if a prediction ID was provided
     if context.args:
         prediction_id = context.args[0]
+        logging.info(f"Generating variations for specific prediction: {prediction_id}")
         try:
             # Get the specific prediction
             prediction = replicate.predictions.get(prediction_id)
+            logging.debug(f"Retrieved prediction data: {prediction.id}")
 
-            # Check if data has been removed
+            # Add logging for data removal check
             if not prediction.input or not prediction.output:
+                logging.warning(f"Prediction data unavailable for ID: {prediction_id}")
                 await update.message.reply_text(
                     "❌ Los datos de esta predicción ya no están disponibles.\n"
                     "Replicate elimina automáticamente los datos después de una hora.\n"
@@ -60,10 +66,16 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     try:
         prompt = params["prompt"]
+        logging.info(f"Starting variation generation for prompt: {prompt}")
         status_message = await update.message.reply_text("⏳ Generando variaciones...")
+
         for i in range(3):
             variation_params = params.copy()
             variation_params["seed"] = random.randint(1, 1000000)
+            logging.debug(
+                f"Generating variation {i+1}/3 with seed: {variation_params['seed']}"
+            )
+
             result = await ReplicateService.generate_image(
                 prompt,
                 user_id=user_id,
