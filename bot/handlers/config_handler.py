@@ -91,18 +91,3 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "❌ Ocurrió un error al procesar la configuración."
         )
-
-
-def format_config_message(config):
-    """Format the configuration message for display"""
-    return (
-        "🛠️ Configuración actual:\n\n"
-        "```json\n"
-        f"{json.dumps(config, indent=2)}\n"
-        "```\n\n"
-        "Para modificar un parámetro usa:\n"
-        "/config <parámetro> <valor>\n\n"
-        "Ejemplo:\n"
-        "/config seed 42\n"
-        "/config guidance_scale 7.5"
-    )
