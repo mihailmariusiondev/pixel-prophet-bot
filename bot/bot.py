@@ -7,7 +7,6 @@ from .handlers import (
     about_handler,
     error_handler,
     generate_handler,
-    download_handler,
     config_handler,
     variations_handler,
     last_generation_handler,
@@ -45,7 +44,6 @@ def run_bot():
     application.add_handler(CommandHandler("help", help_handler))
     application.add_handler(CommandHandler("about", about_handler))
     application.add_handler(CommandHandler("generate", generate_handler))
-    application.add_handler(CommandHandler("download", download_handler))
     application.add_handler(CommandHandler("config", config_handler))
     application.add_handler(CommandHandler("variations", variations_handler))
     application.add_handler(CommandHandler("last_generation", last_generation_handler))

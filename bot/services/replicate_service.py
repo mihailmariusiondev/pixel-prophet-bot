@@ -1,11 +1,7 @@
 import replicate
 import logging
-import os
-from pathlib import Path
-import urllib.request
-from datetime import datetime
 import json
-from ..utils import Database
+from ..utils.database import Database
 
 db = Database()
 
@@ -32,88 +28,6 @@ class ReplicateService:
         "extra_lora_scale": 1,  # Additional LoRA adjustment
         "num_inference_steps": 28,  # Balance between quality and speed
     }
-
-    @staticmethod
-    def get_image_filename(prediction) -> str:
-        """
-        Generates a standardized filename for saved images.
-        Format: date_id_prompt.jpg
-        Handles special characters and length limitations.
-        """
-        try:
-            # Convertir el string de fecha a objeto datetime
-            # El formato de Replicate es: "2024-03-20T14:30:22.907244Z"
-            created_at = datetime.strptime(
-                prediction.created_at.split(".")[0], "%Y-%m-%dT%H:%M:%S"
-            )
-
-            # Formatear la fecha
-            date_str = created_at.strftime("%Y-%m-%d_%H%M%S")
-
-            # Limpiar el prompt (primeros 30 caracteres)
-            prompt = prediction.input.get("prompt", "unknown_prompt")
-            clean_prompt = "".join(
-                c if c.isalnum() else "_" for c in prompt[:30]
-            ).rstrip("_")
-
-            # Crear nombre: fecha_id_prompt.jpg
-            return f"{date_str}_{prediction.id}_{clean_prompt}.jpg"
-
-        except Exception as e:
-            logging.error(f"Error generating filename: {e}", exc_info=True)
-            # Nombre de respaldo si algo falla
-            return f"unknown_date_{prediction.id}.jpg"
-
-    @staticmethod
-    async def download_prediction(prediction) -> bool:
-        """
-        Downloads and saves prediction images to OneDrive.
-        Implements idempotency to avoid duplicate downloads.
-
-        Args:
-            prediction: Replicate prediction object
-
-        Returns:
-            bool: True if download successful or file exists
-        """
-        try:
-            # Define the OneDrive path
-            onedrive_path = (
-                Path(os.path.expanduser("~"))
-                / "OneDrive"
-                / "_Areas"
-                / "Astria"
-                / "Replicate"
-            )
-
-            # Create directory if it doesn't exist
-            onedrive_path.mkdir(parents=True, exist_ok=True)
-
-            # Generate filename
-            filename = ReplicateService.get_image_filename(prediction)
-            full_path = onedrive_path / filename
-
-            # Check if file already exists
-            if full_path.exists():
-                logging.info(f"Image already exists: {filename}")
-                return True
-
-            # Get the URL from prediction output
-            url = (
-                prediction.output[0]
-                if isinstance(prediction.output, list)
-                else prediction.output
-            )
-
-            # Download the file
-            logging.info(f"Downloading image to: {full_path}")
-            urllib.request.urlretrieve(url, full_path)
-            logging.info(f"Successfully downloaded: {filename}")
-            return True
-
-        except Exception as e:
-            logging.error(f"Error downloading prediction: {e}", exc_info=True)
-            return False
 
     @staticmethod
     async def generate_image(prompt, user_id=None, custom_params=None):
@@ -176,10 +90,6 @@ class ReplicateService:
                     output_url=output[0],
                 )
 
-                # Download the generated image
-                logging.debug("Initiating image download")
-                await ReplicateService.download_prediction(latest_prediction)
-
                 return (
                     output[0],
                     latest_prediction.id,
@@ -195,48 +105,3 @@ class ReplicateService:
         except Exception as e:
             logging.error(f"Unexpected error in image generation: {e}", exc_info=True)
             return None
-
-    @staticmethod
-    async def download_all_predictions():
-        """Download all predictions from all pages"""
-        try:
-            count = 0
-            all_predictions = []
-
-            # Obtener primera página
-            current_page = replicate.predictions.list()
-
-            # Recopilar todas las predicciones de todas las páginas
-            while True:
-                # Añadir predicciones de la página actual
-                all_predictions.extend(current_page.results)
-
-                # Si no hay más páginas, salir del bucle
-                if not current_page.next:
-                    break
-
-                # Obtener siguiente página
-                current_page = replicate.predictions.list(current_page.next)
-
-            # Ordenar todas las predicciones por fecha
-            sorted_predictions = sorted(
-                all_predictions,
-                key=lambda x: x.created_at,
-                reverse=True,  # True = más reciente primero
-            )
-
-            # Procesar predicciones ordenadas
-            for prediction in sorted_predictions:
-                if prediction.status == "succeeded" and prediction.output:
-                    if await ReplicateService.download_prediction(prediction):
-                        count += 1
-                        logging.info(
-                            f"Downloaded {count} of {len(sorted_predictions)} predictions"
-                        )
-
-            logging.info(f"Successfully downloaded {count} predictions from all pages")
-            return count
-
-        except Exception as e:
-            logging.error(f"Error downloading predictions: {e}", exc_info=True)
-            raise
