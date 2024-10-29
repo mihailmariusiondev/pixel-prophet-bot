@@ -11,21 +11,28 @@ db = Database()
 
 
 async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle the /variations command to generate variations of a specific prediction"""
+    """
+    Handle the /variations command to generate variations of a specific prediction.
+    Can work with either a provided prediction ID or the user's last generation.
+
+    Args:
+        update: Telegram update object
+        context: Bot context containing command arguments
+    """
     user_id = update.effective_user.id
     logging.info(f"Variations requested by user {user_id}")
 
-    # Get user's current config
+    # Get user's current configuration
     params = db.get_user_config(user_id, ReplicateService.default_params.copy())
     logging.debug(f"Retrieved user config for {user_id}: {params}")
 
+    # Handle specific prediction ID if provided
     if context.args:
         prediction_id = context.args[0]
         logging.info(f"Generating variations for specific prediction: {prediction_id}")
 
-        # Get prediction data from local storage or API
+        # Attempt to retrieve prediction data
         prediction_data = await ReplicateService.get_prediction_data(prediction_id)
-
         if not prediction_data:
             logging.warning(f"No data found for prediction {prediction_id}")
             await update.message.reply_text(
@@ -35,6 +42,7 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             )
             return
 
+        # Extract prompt from prediction data
         params["prompt"] = prediction_data.get("prompt") or prediction_data.input.get("prompt")
         logging.debug(f"Retrieved prompt for variation: {params['prompt']}")
 

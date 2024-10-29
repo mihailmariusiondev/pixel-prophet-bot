@@ -7,24 +7,32 @@ from ..utils.message_utils import format_generation_message
 
 
 async def fashion_prompts_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Generate multiple fashion prompts and create images"""
+    """
+    Generate multiple fashion prompts and create corresponding images.
+    Uses OpenAI to generate specialized fashion-focused prompts and creates images for each.
+
+    Args:
+        update: Telegram update object
+        context: Bot context
+    """
     user_id = update.effective_user.id
     logging.info(f"Fashion prompts generation requested by user {user_id}")
 
     try:
+        # Send initial status message
         status_message = await update.message.reply_text(
             "🎭 Generating fashion prompts..."
         )
+        logging.debug("Starting fashion prompt generation process")
+
         prompts = []
-
+        # Define system prompt for consistent fashion-focused results
         system_prompt = """You are a world-class prompt engineer specializing in creating exceptional, highly detailed prompts for AI text-to-image tools. Your expertise lies in crafting prompts that result in photorealistic, hyper-realistic images.
-
 Create a single prompt with these key elements:
 - MUST start with 'MARIUS'
 - Subject must exude confidence through posture and environment interaction
 - Include subtle athletic build description
 - CRITICAL: Explicitly describe gaze direction (NOT at camera, but face must be visible)
-
 Follow these restrictions:
 - No shirtless/undressed scenarios
 - No age specifications
@@ -34,11 +42,11 @@ Follow these restrictions:
 - Elegant but not luxury-focused
 - Pure description, no titles
 - ABSOLUTELY ESSENTIAL: In every prompt, explicitly state the subject's gaze direction, ensuring it is not towards the camera while keeping the face visible and engaging.
-
 Return ONLY the prompt text, no additional formatting or explanations. The prompt must be a single, coherent sentence."""
 
-        # Generate 3 separate prompts
+        # Generate three unique prompts
         for i in range(3):
+            logging.debug(f"Generating prompt {i+1}/3")
             prompt = await chat_completion(
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -51,29 +59,40 @@ Return ONLY the prompt text, no additional formatting or explanations. The promp
             )
 
             if prompt:
-                # Clean up the prompt - remove any extra whitespace or line breaks
+                # Clean and validate prompt
                 clean_prompt = " ".join(prompt.strip().split())
                 if clean_prompt.startswith("MARIUS"):
                     prompts.append(clean_prompt)
+                    logging.debug(f"Generated valid prompt: {clean_prompt[:50]}...")
 
         if not prompts:
+            logging.error("Failed to generate any valid prompts")
             await status_message.edit_text("❌ Error generating prompts.")
             return
 
         # Generate images for each prompt
+        logging.info(f"Starting image generation for {len(prompts)} prompts")
         await status_message.edit_text("🎨 Generating images from prompts...")
 
-        for prompt in prompts:
+        for i, prompt in enumerate(prompts, 1):
+            logging.debug(f"Generating image {i}/3 for prompt: {prompt[:50]}...")
             result = await ReplicateService.generate_image(prompt, user_id=user_id)
+
             if result and isinstance(result, tuple):
                 image_url, prediction_id, input_params = result
+                logging.info(
+                    f"Successfully generated image {i}/3 with ID: {prediction_id}"
+                )
                 await update.message.reply_text(
                     f"*Original Prompt:*\n`{prompt}`\n\n"
                     + format_generation_message(image_url, prediction_id, input_params),
                     parse_mode="Markdown",
                 )
+            else:
+                logging.error(f"Failed to generate image {i}/3")
 
         await status_message.edit_text("✅ Fashion prompt generation completed!")
+        logging.info(f"Completed fashion prompt generation for user {user_id}")
 
     except Exception as e:
         logging.error(f"Error in fashion_prompts_handler: {e}", exc_info=True)

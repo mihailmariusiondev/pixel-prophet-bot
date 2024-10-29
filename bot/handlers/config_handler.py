@@ -9,7 +9,14 @@ db = Database()
 
 
 async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle the /config command to view or modify generation parameters"""
+    """
+    Handle the /config command to view or modify generation parameters.
+    Allows users to customize their image generation settings.
+
+    Args:
+        update: Telegram update containing command and parameters
+        context: Bot context containing command arguments
+    """
     user_id = update.effective_user.id
     args = context.args
     logging.info(f"Config command received from user {user_id}")
