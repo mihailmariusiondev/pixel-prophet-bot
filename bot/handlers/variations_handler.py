@@ -83,9 +83,15 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             )
             if result and isinstance(result, tuple):
                 image_url, prediction_id, input_params = result
+                # First send the details message
                 await update.message.reply_text(
-                    format_generation_message(image_url, prediction_id, input_params),
-                    parse_mode="Markdown",
+                    format_generation_message(prediction_id, input_params),
+                    parse_mode="Markdown"
+                )
+                # Then send the image
+                await update.message.reply_photo(
+                    photo=image_url,
+                    caption="🖼️ Variación generada"
                 )
             else:
                 await update.message.reply_text("❌ Error al generar la variación.")

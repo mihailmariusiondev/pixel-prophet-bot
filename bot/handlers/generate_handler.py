@@ -78,9 +78,15 @@ async def process_next_prompt(user_id):
 
         if result and isinstance(result, tuple):
             image_url, prediction_id, input_params = result
-            await message.edit_text(
-                format_generation_message(image_url, prediction_id, input_params),
-                parse_mode="Markdown",
+            # First send the details message
+            await message.reply_text(
+                format_generation_message(prediction_id, input_params),
+                parse_mode="Markdown"
+            )
+            # Then send the image
+            await message.reply_photo(
+                photo=image_url,
+                caption="🖼️ Imagen generada"
             )
         else:
             await message.edit_text(

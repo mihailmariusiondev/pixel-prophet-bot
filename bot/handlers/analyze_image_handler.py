@@ -60,22 +60,31 @@ async def analyze_image_handler(update: Update, context: ContextTypes.DEFAULT_TY
             await status_message.edit_text("❌ Could not analyze the image.")
             return
 
-        logging.info(
-            f"Generated description: {description[:100]}..."
-        )  # Log first 100 chars
+        # Send the description as a new message
+        await update.message.reply_text(
+            f"📝 *Generated Description:*\n`{description}`",
+            parse_mode="Markdown"
+        )
 
-        # Update status while generating new image
+        # Update status for image generation
         await status_message.edit_text("⏳ Generating image...")
-        logging.info(f"Starting image generation based on analysis for user {user_id}")
+
+        logging.info(f"Generated description: {description[:100]}...")  # Log first 100 chars
 
         # Generate new image using the description
         result = await ReplicateService.generate_image(description, user_id=user_id)
         if result and isinstance(result, tuple):
             image_url, prediction_id, input_params = result
             logging.info(f"Successfully generated image with ID: {prediction_id}")
+            # First send the details message
             await update.message.reply_text(
-                format_generation_message(image_url, prediction_id, input_params),
-                parse_mode="Markdown",
+                format_generation_message(prediction_id, input_params),
+                parse_mode="Markdown"
+            )
+            # Then send the image
+            await update.message.reply_photo(
+                photo=image_url,
+                caption="🖼️ Imagen similar generada"
             )
         else:
             logging.error(f"Image generation failed for user {user_id}")
