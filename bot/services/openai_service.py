@@ -58,7 +58,7 @@ async def transcribe_audio(file_path, model="whisper-1", language=None):
 
 async def analyze_image(image_url: str) -> str:
     """
-    Analyzes an image using OpenAI's GPT-4 model and returns a description in English.
+    Analyzes an image using OpenAI's GPT-4 Vision model and returns a description in English.
     Args:
         image_url: URL of the image to analyze
     Returns:
@@ -66,7 +66,7 @@ async def analyze_image(image_url: str) -> str:
     """
     try:
         response = client.chat.completions.create(
-            model="gpt-4-vision",
+            model="gpt-4o",
             messages=[
                 {
                     "role": "user",
@@ -75,16 +75,12 @@ async def analyze_image(image_url: str) -> str:
                             "type": "text",
                             "text": "Create a detailed image generation prompt based on this image. Focus on describing the main subject, composition, lighting, mood, and style. Keep it concise but descriptive. Write in English and focus on visual elements that would be important for image generation.",
                         },
-                        {
-                            "type": "image_url",
-                            "image_url": image_url,
-                        },
+                        {"type": "image_url", "image_url": {"url": image_url}},
                     ],
                 }
             ],
             max_tokens=300,
         )
-
         return response.choices[0].message.content
     except Exception as e:
         logging.error(f"Error analyzing image: {e}", exc_info=True)
