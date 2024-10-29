@@ -43,14 +43,60 @@ async def analyze_image_handler(update: Update, context: ContextTypes.DEFAULT_TY
                     "content": [
                         {
                             "type": "text",
-                            "text": "Create a detailed image generation prompt based on this image. Focus on describing the main subject, composition, lighting, mood, and style. Keep it concise but descriptive. Write in English and focus on visual elements that would be important for image generation.",
+                            "text": """Return ONLY the descriptive text without any headers, formatting, or meta-text. Do not include phrases like 'Prompt for Image Generation' or any section markers.
+
+Analyze this image and create an extremely detailed generation prompt. Include ALL of the following aspects:
+
+1. Main Subject:
+- Precise description of the subject(s)
+- Pose, expression, and positioning
+- Clothing and accessories in detail
+- Age range and distinguishing features
+
+2. Composition:
+- Camera angle and perspective
+- Framing and positioning
+- Distance from subject (close-up, medium, full shot)
+- Rule of thirds or other compositional techniques
+
+3. Environment/Setting:
+- Location details
+- Background elements
+- Time of day
+- Weather conditions (if applicable)
+- Architectural or natural elements
+
+4. Lighting:
+- Main light source and direction
+- Shadow characteristics
+- Lighting style (natural, studio, dramatic, etc.)
+- Highlights and contrast details
+
+5. Color Palette:
+- Dominant colors
+- Color relationships
+- Tonal range
+- Color temperature
+
+6. Technical Details:
+- Image style (photorealistic, cinematic, editorial)
+- Lens characteristics (focal length effect)
+- Depth of field
+- Texture and material qualities
+
+7. Mood and Atmosphere:
+- Overall emotional tone
+- Atmospheric effects
+- Environmental mood indicators
+
+Format the response as a single, detailed prompt that captures all these elements in a cohesive, natural way. Focus on visual elements that are crucial for accurate image generation. Write in English and be as specific as possible while maintaining readability.""",
                         },
                         {"type": "image_url", "image_url": {"url": image_url}},
                     ],
                 }
             ],
             temperature=0.7,
-            max_tokens=300,
+            max_tokens=500,
         )
 
         if not description:
@@ -62,14 +108,15 @@ async def analyze_image_handler(update: Update, context: ContextTypes.DEFAULT_TY
 
         # Send the description as a new message
         await update.message.reply_text(
-            f"📝 *Generated Description:*\n`{description}`",
-            parse_mode="Markdown"
+            f"📝 *Generated Description:*\n`{description}`", parse_mode="Markdown"
         )
 
         # Update status for image generation
         await status_message.edit_text("⏳ Generating image...")
 
-        logging.info(f"Generated description: {description[:100]}...")  # Log first 100 chars
+        logging.info(
+            f"Generated description: {description[:100]}..."
+        )  # Log first 100 chars
 
         # Generate new image using the description
         result = await ReplicateService.generate_image(description, user_id=user_id)
@@ -79,12 +126,11 @@ async def analyze_image_handler(update: Update, context: ContextTypes.DEFAULT_TY
             # First send the details message
             await update.message.reply_text(
                 format_generation_message(prediction_id, input_params),
-                parse_mode="Markdown"
+                parse_mode="Markdown",
             )
             # Then send the image
             await update.message.reply_photo(
-                photo=image_url,
-                caption="🖼️ Imagen similar generada"
+                photo=image_url, caption="🖼️ Imagen similar generada"
             )
         else:
             logging.error(f"Image generation failed for user {user_id}")
