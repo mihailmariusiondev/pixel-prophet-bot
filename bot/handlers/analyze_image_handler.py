@@ -1,7 +1,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 import logging
-from ..services.openai_service import analyze_image
+from ..services.openai_service import chat_completion
 from ..services.replicate_service import ReplicateService
 from ..utils.message_utils import format_generation_message
 
@@ -25,8 +25,21 @@ async def analyze_image_handler(update: Update, context: ContextTypes.DEFAULT_TY
         # Send status message
         status_message = await update.message.reply_text("🔍 Analyzing image...")
 
-        # Analyze the image with OpenAI Vision
-        description = await analyze_image(image_url)
+        # Using the generic chat_completion with vision message format
+        description = await chat_completion(
+            messages=[{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "Create a detailed image generation prompt based on this image. Focus on describing the main subject, composition, lighting, mood, and style. Keep it concise but descriptive. Write in English and focus on visual elements that would be important for image generation.",
+                    },
+                    {"type": "image_url", "image_url": {"url": image_url}},
+                ]
+            }],
+            temperature=0.7,
+            max_tokens=300
+        )
 
         if not description:
             await status_message.edit_text("❌ Could not analyze the image.")

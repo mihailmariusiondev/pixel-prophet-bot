@@ -12,6 +12,7 @@ from .handlers import (
     variations_handler,
     last_generation_handler,
     analyze_image_handler,
+    fashion_prompts_handler,
 )
 from .utils.logging_config import setup_logging
 
@@ -48,6 +49,7 @@ def run_bot():
     application.add_handler(CommandHandler("config", config_handler))
     application.add_handler(CommandHandler("variations", variations_handler))
     application.add_handler(CommandHandler("last_generation", last_generation_handler))
+    application.add_handler(CommandHandler("fashion", fashion_prompts_handler))
 
     application.add_handler(MessageHandler(filters.PHOTO, analyze_image_handler))
     logging.info("Command handlers registered")

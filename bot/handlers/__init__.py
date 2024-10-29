@@ -8,3 +8,4 @@ from .config_handler import *
 from .variations_handler import *
 from .last_generation_handler import *
 from .analyze_image_handler import *
+from .fashion_prompts_handler import *
