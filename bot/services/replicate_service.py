@@ -17,7 +17,7 @@ class ReplicateService:
     # Default parameters for image generation
     # These values have been tuned for optimal results
     default_params = {
-        "seed": lambda: random.randint(1, 1000000),  # Random seed by default
+        "seed": -1,  # Default seed value, will be randomized during generation
         "model": "dev",  # Model version
         "lora_scale": 1,  # LoRA adaptation strength
         "num_outputs": 1,  # Number of images to generate
@@ -55,10 +55,8 @@ class ReplicateService:
                 input_params = ReplicateService.default_params.copy()
                 logging.debug("Using default configuration")
 
-            # Evaluate the seed lambda if present
-            if callable(input_params["seed"]):
-                input_params["seed"] = input_params["seed"]()
-
+            # Always randomize seed before generation
+            input_params["seed"] = random.randint(1, 1000000)
             input_params["prompt"] = prompt
 
             logging.info("Sending request to Replicate API")
