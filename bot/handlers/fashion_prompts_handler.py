@@ -3,17 +3,11 @@ from telegram.ext import ContextTypes
 import logging
 from ..services.openai_service import chat_completion
 from ..services.replicate_service import ReplicateService
-from ..utils.message_utils import format_generation_message
 
 
 async def fashion_prompts_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Generate multiple fashion prompts and create corresponding images.
-    Uses OpenAI to generate specialized fashion-focused prompts and creates images for each.
-
-    Args:
-        update: Telegram update object
-        context: Bot context
     """
     user_id = update.effective_user.id
     username = update.effective_user.username or "Unknown"
@@ -24,7 +18,6 @@ async def fashion_prompts_handler(update: Update, context: ContextTypes.DEFAULT_
         status_message = await update.message.reply_text(
             "🎭 Generating fashion prompts..."
         )
-        logging.debug(f"Starting fashion prompt generation process for user {user_id}")
 
         prompts = []
         # Define system prompt for consistent fashion-focused results
@@ -64,9 +57,13 @@ Return ONLY the prompt text, no additional formatting or explanations. The promp
                 clean_prompt = " ".join(prompt.strip().split())
                 if clean_prompt.startswith("MARIUS"):
                     prompts.append(clean_prompt)
-                    logging.debug(f"Generated valid prompt {i+1}: {clean_prompt[:100]}...")
+                    logging.debug(
+                        f"Generated valid prompt {i+1}: {clean_prompt[:100]}..."
+                    )
                 else:
-                    logging.warning(f"Generated prompt {i+1} invalid - doesn't start with MARIUS")
+                    logging.warning(
+                        f"Generated prompt {i+1} invalid - doesn't start with MARIUS"
+                    )
             else:
                 logging.error(f"Failed to generate prompt {i+1} for user {user_id}")
 
@@ -76,32 +73,25 @@ Return ONLY the prompt text, no additional formatting or explanations. The promp
             return
 
         # Generate images for each prompt
-        logging.info(f"Starting image generation for {len(prompts)} prompts - User: {user_id}")
+        logging.info(
+            f"Starting image generation for {len(prompts)} prompts - User: {user_id}"
+        )
         await status_message.edit_text("🎨 Generating images from prompts...")
 
         for i, prompt in enumerate(prompts, 1):
             logging.debug(f"Generating image {i}/{len(prompts)} for user {user_id}")
-            logging.debug(f"Prompt {i}: {prompt[:100]}...")
-
-            result = await ReplicateService.generate_image(prompt, user_id=user_id)
-            if result and isinstance(result, tuple):
-                image_url, prediction_id, input_params = result
-                logging.info(
-                    f"Successfully generated image {i}/{len(prompts)} - ID: {prediction_id}"
-                )
-                await update.message.reply_text(
-                    f"*Original Prompt:*\n`{prompt}`\n\n"
-                    + format_generation_message(prediction_id, input_params),
-                    parse_mode="Markdown",
-                )
-            else:
-                logging.error(f"Failed to generate image {i}/{len(prompts)} for user {user_id}")
+            await ReplicateService.generate_image(
+                prompt, user_id=user_id, message=update.message
+            )
 
         await status_message.edit_text("✅ Fashion prompt generation completed!")
         logging.info(f"Completed fashion prompt generation for user {user_id}")
 
     except Exception as e:
-        logging.error(f"Error in fashion_prompts_handler for user {user_id}: {str(e)}", exc_info=True)
+        logging.error(
+            f"Error in fashion_prompts_handler for user {user_id}: {str(e)}",
+            exc_info=True,
+        )
         await update.message.reply_text(
             "❌ An error occurred while generating fashion prompts."
         )

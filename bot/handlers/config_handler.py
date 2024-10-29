@@ -7,8 +7,14 @@ from ..utils import Database
 
 db = Database()
 
-# Define the allowed parameters and their limits
+# Define the allowed parameters and their order
 ALLOWED_PARAMS = {
+    "num_inference_steps": {
+        "type": "int",
+        "min": 1,
+        "max": 50,
+        "description": "Calidad/velocidad trade-off",
+    },
     "guidance_scale": {
         "type": "float",
         "min": 0,
@@ -20,12 +26,6 @@ ALLOWED_PARAMS = {
         "min": 0,
         "max": 1,
         "description": "Balance entre prompt e imagen",
-    },
-    "num_inference_steps": {
-        "type": "int",
-        "min": 1,
-        "max": 50,
-        "description": "Calidad/velocidad trade-off",
     },
 }
 
@@ -47,13 +47,18 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not args:
             logging.debug(f"Showing current config for user {user_id}")
             config = db.get_user_config(user_id, ReplicateService.default_params)
-            filtered_config = {k: v for k, v in config.items() if k in ALLOWED_PARAMS}
+            # Create ordered filtered config using ALLOWED_PARAMS order
+            filtered_config = {
+                param: config.get(param)
+                for param in ALLOWED_PARAMS
+                if param in config
+            }
 
             # Create help message with parameter limits, properly escaped
             help_text = (
+                "• `num_inference_steps`: Calidad/velocidad trade-off (1-50)\n"
                 "• `guidance_scale`: Controla qué tan cerca sigue el prompt (0-10)\n"
-                "• `prompt_strength`: Balance entre prompt e imagen (0-1)\n"
-                "• `num_inference_steps`: Calidad/velocidad trade-off (1-50)"
+                "• `prompt_strength`: Balance entre prompt e imagen (0-1)"
             )
 
             message = (

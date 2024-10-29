@@ -5,17 +5,19 @@ import logging
 def format_generation_message(prediction_id: str, input_params: str) -> str:
     """
     Format a consistent message for image generation results.
-    Only shows guidance_scale, prompt_strength and num_inference_steps parameters.
+    Shows prompt, seed, guidance_scale, prompt_strength and num_inference_steps parameters.
     """
     try:
         # Parse input_params from string
         params_dict = json.loads(input_params)
-        
-        # Filter only the parameters we want to show
+
+        # Filter parameters we want to show, including prompt and seed
         filtered_params = {
-            k: v
-            for k, v in params_dict.items()
-            if k in ["guidance_scale", "prompt_strength", "num_inference_steps"]
+            "seed": params_dict.get("seed", -1),
+            "prompt": params_dict.get("prompt", "No prompt provided"),
+            "num_inference_steps": params_dict.get("num_inference_steps"),
+            "guidance_scale": params_dict.get("guidance_scale"),
+            "prompt_strength": params_dict.get("prompt_strength"),
         }
 
         formatted_params = json.dumps(filtered_params, indent=2)

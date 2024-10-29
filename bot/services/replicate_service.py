@@ -3,6 +3,7 @@ import logging
 import json
 from ..utils.database import Database
 import random
+from ..utils.message_utils import format_generation_message
 
 db = Database()
 
@@ -31,12 +32,13 @@ class ReplicateService:
     }
 
     @staticmethod
-    async def generate_image(prompt, user_id=None):
+    async def generate_image(prompt, user_id=None, message=None):
         """
-        Generates an image using the Replicate API.
+        Generates an image using the Replicate API and sends results to user if message provided.
         Args:
             prompt: Text description for image generation
             user_id: Optional Telegram user ID for config lookup
+            message: Optional telegram message object to reply with results
         Returns:
             tuple: (image_url, prediction_id, parameters_json) or None on failure
         """
@@ -86,11 +88,24 @@ class ReplicateService:
                     output_url=output[0],
                 )
 
-                return (
+                result = (
                     output[0],
                     latest_prediction.id,
                     json.dumps(input_params, indent=2),
                 )
+
+                # Send results if message object provided
+                if message and result:
+                    image_url, prediction_id, input_params = result
+                    await message.reply_text(
+                        format_generation_message(prediction_id, input_params),
+                        parse_mode="Markdown",
+                    )
+                    await message.reply_photo(
+                        photo=image_url, caption="🖼️ Imagen generada"
+                    )
+
+                return result
             else:
                 logging.error("No predictions found in response")
                 return None
@@ -100,4 +115,6 @@ class ReplicateService:
             return None
         except Exception as e:
             logging.error(f"Unexpected error in image generation: {e}", exc_info=True)
+            if message:
+                await message.reply_text("❌ Error al generar la imagen.")
             return None

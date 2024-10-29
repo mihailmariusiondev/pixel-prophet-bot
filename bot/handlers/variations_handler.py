@@ -3,8 +3,6 @@ from telegram.ext import ContextTypes
 from ..services.replicate_service import ReplicateService
 from ..utils.database import Database
 import logging
-import random
-from ..utils.message_utils import format_generation_message
 
 db = Database()
 
@@ -12,10 +10,6 @@ db = Database()
 async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Handle the /variations command to generate variations of a specific prediction.
-    Uses stored data from database to generate variations of previous images.
-    Args:
-        update: Telegram update object
-        context: Bot context containing command arguments
     """
     user_id = update.effective_user.id
     username = update.effective_user.username or "Unknown"
@@ -23,7 +17,6 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     # Get user's current configuration
     params = db.get_user_config(user_id, ReplicateService.default_params.copy())
-    logging.debug(f"Retrieved configuration for user {user_id}: {params}")
 
     # Handle specific prediction ID if provided
     if context.args:
@@ -31,7 +24,6 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         logging.info(
             f"Generating variations for specific prediction: {prediction_id} by user {user_id}"
         )
-
         # Get prediction data from database
         prediction_data = db.get_prediction(prediction_id)
         if not prediction_data:
@@ -43,17 +35,11 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 "Por favor, usa una generación más reciente o crea una nueva."
             )
             return
-
         # Extract prompt from prediction data
         prompt, input_params, _ = prediction_data
         params["prompt"] = prompt
-        logging.debug(f"Retrieved prompt for variation: {params['prompt'][:100]}...")
-
     else:
         # Get last prediction from database for this user
-        logging.debug(
-            f"No prediction ID provided, fetching last prediction for user {user_id}"
-        )
         last_prediction = db.get_last_prediction(user_id)
         if not last_prediction:
             logging.warning(f"No previous predictions found for user {user_id}")
@@ -62,32 +48,16 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 "proporciona un ID de predicción: /variations <prediction_id>"
             )
             return
-        params["prompt"] = last_prediction[
-            0
-        ]  # Assuming get_last_prediction returns (prompt, input_params, output_url)
+        params["prompt"] = last_prediction[0]
 
     try:
-        prompt = params["prompt"]
-        logging.info(f"Starting variation generation for prompt: {prompt}")
         status_message = await update.message.reply_text("⏳ Generando variaciones...")
 
-        # Generate 3 variations - each will have a random seed
+        # Generate 3 variations
         for i in range(3):
-            result = await ReplicateService.generate_image(prompt, user_id=user_id)
-
-            if result and isinstance(result, tuple):
-                image_url, prediction_id, input_params = result
-                # First send the details message
-                await update.message.reply_text(
-                    format_generation_message(prediction_id, input_params),
-                    parse_mode="Markdown",
-                )
-                # Then send the image
-                await update.message.reply_photo(
-                    photo=image_url, caption="🖼️ Variación generada"
-                )
-            else:
-                await update.message.reply_text("❌ Error al generar la variación.")
+            await ReplicateService.generate_image(
+                params["prompt"], user_id=user_id, message=update.message
+            )
 
         await status_message.edit_text(
             "✅ Proceso completado: 3 variaciones generadas."

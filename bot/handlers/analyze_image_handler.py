@@ -3,7 +3,6 @@ from telegram.ext import ContextTypes
 import logging
 from ..services.openai_service import chat_completion
 from ..services.replicate_service import ReplicateService
-from ..utils.message_utils import format_generation_message
 
 
 async def analyze_image_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -34,7 +33,9 @@ async def analyze_image_handler(update: Update, context: ContextTypes.DEFAULT_TY
 
         # Send initial status message
         status_message = await update.message.reply_text("🔍 Analyzing image...")
-        logging.info(f"Starting image analysis for user {user_id} - File ID: {photo.file_id}")
+        logging.info(
+            f"Starting image analysis for user {user_id} - File ID: {photo.file_id}"
+        )
 
         # Request image description from OpenAI
         description = await chat_completion(
@@ -113,34 +114,23 @@ Format the response as a single, detailed prompt that captures all these element
         )
 
         # Update status for image generation
-        await status_message.edit_text("⏳ Generating image...")
+        await status_message.edit_text("⏳ Generando imagen...")
         logging.debug(f"Starting image generation based on analysis for user {user_id}")
 
         logging.info(
             f"Generated description for user {user_id}: {description[:100]}..."
         )  # Log first 100 chars
 
-        # Generate new image using the description
-        result = await ReplicateService.generate_image(description, user_id=user_id)
-        if result and isinstance(result, tuple):
-            image_url, prediction_id, input_params = result
-            logging.info(f"Successfully generated image for user {user_id} - Prediction ID: {prediction_id}")
-            # First send the details message
-            await update.message.reply_text(
-                format_generation_message(prediction_id, input_params),
-                parse_mode="Markdown",
-            )
-            # Then send the image
-            await update.message.reply_photo(
-                photo=image_url, caption="🖼️ Imagen similar generada"
-            )
-            logging.debug(f"Successfully sent generation results to user {user_id}")
-        else:
-            logging.error(f"Image generation failed for user {user_id}")
-            await status_message.edit_text("❌ Error generating the image.")
+        # Generate new image and send results
+        await ReplicateService.generate_image(
+            description, user_id=user_id, message=update.message
+        )
 
     except Exception as e:
-        logging.error(f"Error in analyze_image_handler for user {user_id}: {str(e)}", exc_info=True)
+        logging.error(
+            f"Error in analyze_image_handler for user {user_id}: {str(e)}",
+            exc_info=True,
+        )
         await update.message.reply_text(
             "❌ An error occurred while processing the image."
         )
