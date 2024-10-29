@@ -14,9 +14,10 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     user_id = update.effective_user.id
     username = update.effective_user.username or "Unknown"
+    chat_id = update.effective_chat.id
 
     # Log the new user interaction with detailed context
-    logging.info(f"New user started bot - ID: {user_id}, Username: {username}")
+    logging.info(f"New user started bot - ID: {user_id}, Username: {username}, Chat: {chat_id}")
 
     # Multi-line welcome message using string concatenation for better readability
     welcome_text = (
@@ -28,10 +29,14 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     try:
+        logging.debug(f"Sending welcome message to user {user_id}")
         await update.message.reply_text(welcome_text)
-        logging.debug(f"Welcome message sent successfully to user {user_id}")
+        logging.info(f"Welcome message sent successfully to user {user_id}")
     except Exception as e:
         logging.error(
-            f"Error sending welcome message to user {user_id}: {e}",
+            f"Error sending welcome message to user {user_id} in chat {chat_id}: {str(e)}",
             exc_info=True
+        )
+        await update.message.reply_text(
+            "❌ Error al mostrar el mensaje de bienvenida. Por favor, intenta nuevamente con /start."
         )

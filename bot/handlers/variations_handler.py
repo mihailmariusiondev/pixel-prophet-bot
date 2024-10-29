@@ -20,21 +20,22 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         context: Bot context containing command arguments
     """
     user_id = update.effective_user.id
-    logging.info(f"Variations requested by user {user_id}")
+    username = update.effective_user.username or "Unknown"
+    logging.info(f"Variations requested by user {user_id} ({username})")
 
     # Get user's current configuration
     params = db.get_user_config(user_id, ReplicateService.default_params.copy())
-    logging.debug(f"Retrieved user config for {user_id}: {params}")
+    logging.debug(f"Retrieved configuration for user {user_id}: {params}")
 
     # Handle specific prediction ID if provided
     if context.args:
         prediction_id = context.args[0]
-        logging.info(f"Generating variations for specific prediction: {prediction_id}")
+        logging.info(f"Generating variations for specific prediction: {prediction_id} by user {user_id}")
 
         # Attempt to retrieve prediction data
         prediction_data = await ReplicateService.get_prediction_data(prediction_id)
         if not prediction_data:
-            logging.warning(f"No data found for prediction {prediction_id}")
+            logging.warning(f"No prediction data found for ID {prediction_id} requested by user {user_id}")
             await update.message.reply_text(
                 "❌ No se encontraron datos para esta predicción.\n"
                 "Los datos pueden haber sido eliminados de Replicate.\n"
@@ -44,18 +45,18 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
         # Extract prompt from prediction data
         params["prompt"] = prediction_data.get("prompt") or prediction_data.input.get("prompt")
-        logging.debug(f"Retrieved prompt for variation: {params['prompt']}")
+        logging.debug(f"Retrieved prompt for variation: {params['prompt'][:100]}...")
 
         if not params["prompt"]:
-            logging.error(f"Could not extract prompt from prediction {prediction_id}")
-            await update.message.reply_text(
-                "❌ No se pudo obtener el prompt de la predicción."
-            )
+            logging.error(f"Failed to extract prompt from prediction {prediction_id} for user {user_id}")
+            await update.message.reply_text("❌ No se pudo obtener el prompt de la predicción.")
             return
     else:
         # Get last prediction from Replicate
+        logging.debug(f"No prediction ID provided, fetching last prediction for user {user_id}")
         predictions_page = replicate.predictions.list()
         if not predictions_page.results:
+            logging.warning(f"No previous predictions found for user {user_id}")
             await update.message.reply_text(
                 "❌ No hay una generación previa. Usa /generate primero o "
                 "proporciona un ID de predicción: /variations <prediction_id>"
@@ -63,6 +64,7 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             return
         latest_prediction = predictions_page.results[0]
         params["prompt"] = latest_prediction.input.get("prompt")
+        logging.info(f"Using latest prediction prompt for user {user_id}: {params['prompt'][:100]}...")
 
     try:
         prompt = params["prompt"]

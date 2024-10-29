@@ -15,7 +15,9 @@ async def download_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     user_id = update.effective_user.id
     username = update.effective_user.username or "Unknown"
-    logging.info(f"Download command received from user {user_id} ({username})")
+    chat_id = update.effective_chat.id
+
+    logging.info(f"Download command received from user {user_id} ({username}) in chat {chat_id}")
 
     try:
         # Send initial status message
@@ -25,11 +27,11 @@ async def download_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.info(f"Starting batch download process for user {user_id}")
 
         # Download all predictions
-        logging.debug("Initiating batch download of all predictions")
+        logging.debug(f"Initiating batch download for user {user_id}")
         count = await ReplicateService.download_all_predictions()
-        logging.info(f"Successfully downloaded {count} predictions")
+        logging.info(f"Successfully downloaded {count} predictions for user {user_id}")
 
-        # Update status message with results
+        # Update status message
         success_message = (
             f"✅ Descarga completada.\n"
             f"Se procesaron {count} imágenes de todas las páginas disponibles."
@@ -38,7 +40,7 @@ async def download_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.info(f"Download completed for user {user_id} - {count} images processed")
 
     except Exception as e:
-        error_msg = f"Error in download_handler for user {user_id}: {e}"
+        error_msg = f"Error in download_handler for user {user_id}: {str(e)}"
         logging.error(error_msg, exc_info=True)
 
         # Send error message to user

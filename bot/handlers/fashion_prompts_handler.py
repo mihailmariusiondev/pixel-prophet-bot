@@ -16,14 +16,15 @@ async def fashion_prompts_handler(update: Update, context: ContextTypes.DEFAULT_
         context: Bot context
     """
     user_id = update.effective_user.id
-    logging.info(f"Fashion prompts generation requested by user {user_id}")
+    username = update.effective_user.username or "Unknown"
+    logging.info(f"Fashion prompts generation requested by user {user_id} ({username})")
 
     try:
         # Send initial status message
         status_message = await update.message.reply_text(
             "🎭 Generating fashion prompts..."
         )
-        logging.debug("Starting fashion prompt generation process")
+        logging.debug(f"Starting fashion prompt generation process for user {user_id}")
 
         prompts = []
         # Define system prompt for consistent fashion-focused results
@@ -46,7 +47,7 @@ Return ONLY the prompt text, no additional formatting or explanations. The promp
 
         # Generate three unique prompts
         for i in range(3):
-            logging.debug(f"Generating prompt {i+1}/3")
+            logging.debug(f"Generating prompt {i+1}/3 for user {user_id}")
             prompt = await chat_completion(
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -63,39 +64,44 @@ Return ONLY the prompt text, no additional formatting or explanations. The promp
                 clean_prompt = " ".join(prompt.strip().split())
                 if clean_prompt.startswith("MARIUS"):
                     prompts.append(clean_prompt)
-                    logging.debug(f"Generated valid prompt: {clean_prompt[:50]}...")
+                    logging.debug(f"Generated valid prompt {i+1}: {clean_prompt[:100]}...")
+                else:
+                    logging.warning(f"Generated prompt {i+1} invalid - doesn't start with MARIUS")
+            else:
+                logging.error(f"Failed to generate prompt {i+1} for user {user_id}")
 
         if not prompts:
-            logging.error("Failed to generate any valid prompts")
+            logging.error(f"Failed to generate any valid prompts for user {user_id}")
             await status_message.edit_text("❌ Error generating prompts.")
             return
 
         # Generate images for each prompt
-        logging.info(f"Starting image generation for {len(prompts)} prompts")
+        logging.info(f"Starting image generation for {len(prompts)} prompts - User: {user_id}")
         await status_message.edit_text("🎨 Generating images from prompts...")
 
         for i, prompt in enumerate(prompts, 1):
-            logging.debug(f"Generating image {i}/3 for prompt: {prompt[:50]}...")
-            result = await ReplicateService.generate_image(prompt, user_id=user_id)
+            logging.debug(f"Generating image {i}/{len(prompts)} for user {user_id}")
+            logging.debug(f"Prompt {i}: {prompt[:100]}...")
 
+            result = await ReplicateService.generate_image(prompt, user_id=user_id)
             if result and isinstance(result, tuple):
                 image_url, prediction_id, input_params = result
                 logging.info(
-                    f"Successfully generated image {i}/3 with ID: {prediction_id}"
+                    f"Successfully generated image {i}/{len(prompts)} - ID: {prediction_id}"
                 )
                 await update.message.reply_text(
                     f"*Original Prompt:*\n`{prompt}`\n\n"
-                    + format_generation_message(image_url, prediction_id, input_params),
+                    + format_generation_message(prediction_id, input_params),
                     parse_mode="Markdown",
                 )
             else:
-                logging.error(f"Failed to generate image {i}/3")
+                logging.error(f"Failed to generate image {i}/{len(prompts)} for user {user_id}")
 
         await status_message.edit_text("✅ Fashion prompt generation completed!")
         logging.info(f"Completed fashion prompt generation for user {user_id}")
 
     except Exception as e:
-        logging.error(f"Error in fashion_prompts_handler: {e}", exc_info=True)
+        logging.error(f"Error in fashion_prompts_handler for user {user_id}: {str(e)}", exc_info=True)
         await update.message.reply_text(
             "❌ An error occurred while generating fashion prompts."
         )

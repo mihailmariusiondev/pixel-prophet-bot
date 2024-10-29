@@ -17,7 +17,8 @@ async def analyze_image_handler(update: Update, context: ContextTypes.DEFAULT_TY
     """
     try:
         user_id = update.effective_user.id
-        logging.info(f"Image analysis requested by user {user_id}")
+        username = update.effective_user.username or "Unknown"
+        logging.info(f"Image analysis requested by user {user_id} ({username})")
 
         # Validate image presence
         if not update.message.photo:
@@ -29,11 +30,11 @@ async def analyze_image_handler(update: Update, context: ContextTypes.DEFAULT_TY
         photo = update.message.photo[-1]
         file = await context.bot.get_file(photo.file_id)
         image_url = file.file_path
-        logging.debug(f"Retrieved image URL: {image_url}")
+        logging.debug(f"Retrieved image URL for user {user_id}: {image_url}")
 
         # Send initial status message
         status_message = await update.message.reply_text("🔍 Analyzing image...")
-        logging.info(f"Starting image analysis for user {user_id}")
+        logging.info(f"Starting image analysis for user {user_id} - File ID: {photo.file_id}")
 
         # Request image description from OpenAI
         description = await chat_completion(
@@ -113,16 +114,17 @@ Format the response as a single, detailed prompt that captures all these element
 
         # Update status for image generation
         await status_message.edit_text("⏳ Generating image...")
+        logging.debug(f"Starting image generation based on analysis for user {user_id}")
 
         logging.info(
-            f"Generated description: {description[:100]}..."
+            f"Generated description for user {user_id}: {description[:100]}..."
         )  # Log first 100 chars
 
         # Generate new image using the description
         result = await ReplicateService.generate_image(description, user_id=user_id)
         if result and isinstance(result, tuple):
             image_url, prediction_id, input_params = result
-            logging.info(f"Successfully generated image with ID: {prediction_id}")
+            logging.info(f"Successfully generated image for user {user_id} - Prediction ID: {prediction_id}")
             # First send the details message
             await update.message.reply_text(
                 format_generation_message(prediction_id, input_params),
@@ -132,12 +134,13 @@ Format the response as a single, detailed prompt that captures all these element
             await update.message.reply_photo(
                 photo=image_url, caption="🖼️ Imagen similar generada"
             )
+            logging.debug(f"Successfully sent generation results to user {user_id}")
         else:
             logging.error(f"Image generation failed for user {user_id}")
             await status_message.edit_text("❌ Error generating the image.")
 
     except Exception as e:
-        logging.error(f"Error in analyze_image_handler: {e}", exc_info=True)
+        logging.error(f"Error in analyze_image_handler for user {user_id}: {str(e)}", exc_info=True)
         await update.message.reply_text(
             "❌ An error occurred while processing the image."
         )

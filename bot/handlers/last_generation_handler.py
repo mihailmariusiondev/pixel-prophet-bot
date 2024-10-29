@@ -10,9 +10,15 @@ db = Database()
 
 
 async def last_generation_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle the /last_generation command to show details of the last generated image"""
+    """
+    Handle the /last_generation command to show details of the user's last generation.
+    Retrieves and displays information about the most recent image generation.
+    """
     user_id = update.effective_user.id
-    logging.info(f"Last generation request from user {user_id}")
+    username = update.effective_user.username or "Unknown"
+    chat_id = update.effective_chat.id
+
+    logging.info(f"Last generation requested by user {user_id} ({username}) in chat {chat_id}")
 
     try:
         logging.debug("Fetching predictions from Replicate")

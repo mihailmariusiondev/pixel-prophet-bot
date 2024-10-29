@@ -18,14 +18,17 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context: Bot context containing command arguments
     """
     user_id = update.effective_user.id
+    username = update.effective_user.username or "Unknown"
     args = context.args
-    logging.info(f"Config command received from user {user_id}")
+    logging.info(f"Config command received from user {user_id} ({username}) with args: {args}")
 
     try:
-        # Si no hay argumentos, mostrar la configuración actual
+        # Show current config if no arguments
         if not args:
             logging.debug(f"Showing current config for user {user_id}")
             config = db.get_user_config(user_id, ReplicateService.default_params)
+            logging.info(f"Current config for user {user_id}: {json.dumps(config)}")
+
             message = (
                 "🛠️ *Configuración actual:*\n\n"
                 f"`{json.dumps(config, indent=2)}`\n\n"
@@ -38,24 +41,24 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(message, parse_mode="MarkdownV2")
             return
 
-        # Si hay argumentos, intentar modificar la configuración
+        # Validate argument format
         if len(args) != 2:
             logging.warning(f"Invalid config format from user {user_id}: {args}")
             await update.message.reply_text(
-                "❌ Formato incorrecto. Usa:\n" "/config <parámetro> <valor>"
+                "❌ Formato incorrecto. Usa:\n"
+                "/config <parámetro> <valor>"
             )
             return
 
         param, value = args[0], args[1]
-        logging.info(
-            f"Config update request - User: {user_id}, Param: {param}, Value: {value}"
-        )
+        logging.info(f"Config update request - User: {user_id}, Param: {param}, Value: {value}")
 
-        # Obtener la configuración actual del usuario o usar la predeterminada
+        # Get current config
         config = db.get_user_config(user_id, ReplicateService.default_params.copy())
         old_value = config.get(param)
+        logging.debug(f"Current value for {param}: {old_value}")
 
-        # Verificar que el parámetro existe
+        # Validate parameter exists
         if param not in ReplicateService.default_params:
             logging.warning(f"Invalid parameter '{param}' requested by user {user_id}")
             await update.message.reply_text(
@@ -65,9 +68,11 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        # Convertir el valor al tipo correcto
+        # Convert value to correct type
         try:
             original_value = ReplicateService.default_params[param]
+            logging.debug(f"Converting value from {type(value).__name__} to {type(original_value).__name__}")
+
             if isinstance(original_value, bool):
                 value = value.lower() in ("true", "1", "yes")
             elif isinstance(original_value, int):
@@ -75,33 +80,29 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             elif isinstance(original_value, float):
                 value = float(value)
 
-            logging.debug(
-                f"Value converted from {type(value).__name__} to {type(original_value).__name__}"
-            )
+            logging.debug(f"Value converted successfully: {value}")
 
         except ValueError:
-            logging.warning(
-                f"Invalid value type for parameter {param} from user {user_id}"
-            )
+            logging.warning(f"Invalid value type for parameter {param} from user {user_id}: {value}")
             await update.message.reply_text(
                 f"❌ Valor no válido para {param}. "
                 f"Debe ser del tipo: {type(original_value).__name__}"
             )
             return
 
-        # Actualizar la configuración
+        # Update the config
         config[param] = value
         db.set_user_config(user_id, config)
         logging.info(
             f"Config updated - User: {user_id}, Param: {param}, Old: {old_value}, New: {value}"
         )
 
-        # Escapar caracteres especiales para MarkdownV2
+        # Escape special characters for MarkdownV2
         old_value_str = str(old_value).replace(".", "\\.").replace("-", "\\-")
         new_value_str = str(value).replace(".", "\\.").replace("-", "\\-")
         param_str = param.replace(".", "\\.").replace("-", "\\-")
 
-        # Crear mensaje con la configuración actualizada
+        # Create message with updated config
         message = (
             "✅ *Parámetro actualizado:*\n"
             f"`{param_str}`: ~`{old_value_str}`~ → `{new_value_str}`\n\n"
