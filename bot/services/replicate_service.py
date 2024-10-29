@@ -20,17 +20,17 @@ class ReplicateService:
     # Default parameters for image generation
     # These values have been tuned for optimal results
     default_params = {
-        "seed": 42,              # For reproducibility
-        "model": "dev",          # Model version
-        "lora_scale": 1,         # LoRA adaptation strength
-        "num_outputs": 1,        # Number of images to generate
-        "aspect_ratio": "4:5",   # Standard Instagram ratio
+        "seed": 42,  # For reproducibility
+        "model": "dev",  # Model version
+        "lora_scale": 1,  # LoRA adaptation strength
+        "num_outputs": 1,  # Number of images to generate
+        "aspect_ratio": "4:5",  # Standard Instagram ratio
         "output_format": "jpg",  # Compressed format for efficiency
-        "guidance_scale": 0,     # How closely to follow the prompt
-        "output_quality": 100,   # Maximum quality for saved images
+        "guidance_scale": 0,  # How closely to follow the prompt
+        "output_quality": 100,  # Maximum quality for saved images
         "prompt_strength": 0.8,  # Balance between prompt and image
-        "extra_lora_scale": 1,   # Additional LoRA adjustment
-        "num_inference_steps": 28, # Balance between quality and speed
+        "extra_lora_scale": 1,  # Additional LoRA adjustment
+        "num_inference_steps": 28,  # Balance between quality and speed
     }
 
     @staticmethod
@@ -173,7 +173,7 @@ class ReplicateService:
                     user_id=user_id,
                     prompt=prompt,
                     input_params=json.dumps(input_params),
-                    output_url=output[0]
+                    output_url=output[0],
                 )
 
                 # Download the generated image
@@ -240,40 +240,3 @@ class ReplicateService:
         except Exception as e:
             logging.error(f"Error downloading predictions: {e}", exc_info=True)
             raise
-
-    @staticmethod
-    async def get_prediction_data(prediction_id):
-        """
-        Get prediction data from local database or Replicate API
-        Args:
-            prediction_id: Unique identifier for the prediction
-        Returns:
-            dict: Prediction data including prompt, input params, and output URL
-            None: If prediction not found or error occurs
-        """
-        try:
-            logging.info(f"Retrieving prediction data for ID: {prediction_id}")
-
-            # First try local database
-            local_data = db.get_prediction(prediction_id)
-            if local_data:
-                logging.debug(f"Found prediction {prediction_id} in local database")
-                prompt, input_params, output_url = local_data
-                return {
-                    'prompt': prompt,
-                    'input': json.loads(input_params),
-                    'output': output_url
-                }
-
-            # If not found locally, try Replicate API
-            logging.debug(f"Prediction {prediction_id} not found locally, trying Replicate API")
-            prediction = replicate.predictions.get(prediction_id)
-            if prediction.status == "succeeded":
-                logging.debug(f"Found prediction {prediction_id} in Replicate API")
-                return prediction
-
-            logging.warning(f"Prediction {prediction_id} not found in either location")
-            return None
-        except Exception as e:
-            logging.error(f"Error retrieving prediction data: {e}", exc_info=True)
-            return None

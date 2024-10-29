@@ -4,7 +4,6 @@ from ..services.replicate_service import ReplicateService
 from ..utils.database import Database
 import logging
 import random
-import replicate
 from ..utils.message_utils import format_generation_message
 
 db = Database()
@@ -13,8 +12,7 @@ db = Database()
 async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Handle the /variations command to generate variations of a specific prediction.
-    Can work with either a provided prediction ID or the user's last generation.
-
+    Uses stored data from database to generate variations of previous images.
     Args:
         update: Telegram update object
         context: Bot context containing command arguments
@@ -30,41 +28,43 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     # Handle specific prediction ID if provided
     if context.args:
         prediction_id = context.args[0]
-        logging.info(f"Generating variations for specific prediction: {prediction_id} by user {user_id}")
+        logging.info(
+            f"Generating variations for specific prediction: {prediction_id} by user {user_id}"
+        )
 
-        # Attempt to retrieve prediction data
-        prediction_data = await ReplicateService.get_prediction_data(prediction_id)
+        # Get prediction data from database
+        prediction_data = db.get_prediction(prediction_id)
         if not prediction_data:
-            logging.warning(f"No prediction data found for ID {prediction_id} requested by user {user_id}")
+            logging.warning(
+                f"No prediction data found for ID {prediction_id} requested by user {user_id}"
+            )
             await update.message.reply_text(
                 "❌ No se encontraron datos para esta predicción.\n"
-                "Los datos pueden haber sido eliminados de Replicate.\n"
                 "Por favor, usa una generación más reciente o crea una nueva."
             )
             return
 
         # Extract prompt from prediction data
-        params["prompt"] = prediction_data.get("prompt") or prediction_data.input.get("prompt")
+        prompt, input_params, _ = prediction_data
+        params["prompt"] = prompt
         logging.debug(f"Retrieved prompt for variation: {params['prompt'][:100]}...")
 
-        if not params["prompt"]:
-            logging.error(f"Failed to extract prompt from prediction {prediction_id} for user {user_id}")
-            await update.message.reply_text("❌ No se pudo obtener el prompt de la predicción.")
-            return
     else:
-        # Get last prediction from Replicate
-        logging.debug(f"No prediction ID provided, fetching last prediction for user {user_id}")
-        predictions_page = replicate.predictions.list()
-        if not predictions_page.results:
+        # Get last prediction from database for this user
+        logging.debug(
+            f"No prediction ID provided, fetching last prediction for user {user_id}"
+        )
+        last_prediction = db.get_last_prediction(user_id)
+        if not last_prediction:
             logging.warning(f"No previous predictions found for user {user_id}")
             await update.message.reply_text(
                 "❌ No hay una generación previa. Usa /generate primero o "
                 "proporciona un ID de predicción: /variations <prediction_id>"
             )
             return
-        latest_prediction = predictions_page.results[0]
-        params["prompt"] = latest_prediction.input.get("prompt")
-        logging.info(f"Using latest prediction prompt for user {user_id}: {params['prompt'][:100]}...")
+        params["prompt"] = last_prediction[
+            0
+        ]  # Assuming get_last_prediction returns (prompt, input_params, output_url)
 
     try:
         prompt = params["prompt"]
@@ -83,24 +83,25 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 user_id=user_id,
                 custom_params=variation_params,
             )
+
             if result and isinstance(result, tuple):
                 image_url, prediction_id, input_params = result
                 # First send the details message
                 await update.message.reply_text(
                     format_generation_message(prediction_id, input_params),
-                    parse_mode="Markdown"
+                    parse_mode="Markdown",
                 )
                 # Then send the image
                 await update.message.reply_photo(
-                    photo=image_url,
-                    caption="🖼️ Variación generada"
+                    photo=image_url, caption="🖼️ Variación generada"
                 )
             else:
                 await update.message.reply_text("❌ Error al generar la variación.")
-        # Mensaje final
+
         await status_message.edit_text(
             "✅ Proceso completado: 3 variaciones generadas."
         )
+
     except Exception as e:
         logging.error(f"Error en variations_handler: {e}", exc_info=True)
         await update.message.reply_text(

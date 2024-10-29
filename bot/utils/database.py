@@ -207,3 +207,30 @@ class Database:
         except Exception as e:
             logging.error(f"Error retrieving prediction: {e}", exc_info=True)
             return None
+
+    def get_last_prediction(self, user_id):
+        """
+        Get the most recent prediction for a specific user
+        Args:
+            user_id: Telegram user ID
+        Returns:
+            tuple: (prompt, input_params, output_url) or None if not found
+        """
+        try:
+            logging.debug(f"Retrieving last prediction for user {user_id}")
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT prompt, input_params, output_url
+                    FROM predictions
+                    WHERE user_id = ?
+                    ORDER BY created_at DESC
+                    LIMIT 1
+                    """,
+                    (user_id,),
+                )
+                return cursor.fetchone()
+        except Exception as e:
+            logging.error(f"Error retrieving last prediction: {e}", exc_info=True)
+            return None
