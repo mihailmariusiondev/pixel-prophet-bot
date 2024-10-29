@@ -2,6 +2,7 @@ import replicate
 import logging
 import json
 from ..utils.database import Database
+import random
 
 db = Database()
 
@@ -16,7 +17,7 @@ class ReplicateService:
     # Default parameters for image generation
     # These values have been tuned for optimal results
     default_params = {
-        "seed": 42,  # For reproducibility
+        "seed": lambda: random.randint(1, 1000000),  # Random seed by default
         "model": "dev",  # Model version
         "lora_scale": 1,  # LoRA adaptation strength
         "num_outputs": 1,  # Number of images to generate
@@ -30,16 +31,12 @@ class ReplicateService:
     }
 
     @staticmethod
-    async def generate_image(prompt, user_id=None, custom_params=None):
+    async def generate_image(prompt, user_id=None):
         """
         Generates an image using the Replicate API.
-        Supports custom parameters and user-specific configurations.
-
         Args:
             prompt: Text description for image generation
             user_id: Optional Telegram user ID for config lookup
-            custom_params: Optional override for generation parameters
-
         Returns:
             tuple: (image_url, prediction_id, parameters_json) or None on failure
         """
@@ -48,20 +45,21 @@ class ReplicateService:
                 f"Starting image generation - User: {user_id}, Prompt: {prompt}"
             )
 
-            if custom_params:
-                input_params = custom_params
-                logging.debug(f"Using custom parameters: {input_params}")
+            # Get user config or default params
+            if user_id is not None:
+                input_params = db.get_user_config(
+                    user_id, ReplicateService.default_params.copy()
+                )
+                logging.debug(f"Using user-specific configuration for user {user_id}")
             else:
-                if user_id is not None:
-                    input_params = db.get_user_config(
-                        user_id, ReplicateService.default_params.copy()
-                    )
-                    logging.debug(f"Using user config for {user_id}: {input_params}")
-                else:
-                    input_params = ReplicateService.default_params.copy()
-                    logging.debug("Using default configuration")
+                input_params = ReplicateService.default_params.copy()
+                logging.debug("Using default configuration")
 
-                input_params["prompt"] = prompt
+            # Evaluate the seed lambda if present
+            if callable(input_params["seed"]):
+                input_params["seed"] = input_params["seed"]()
+
+            input_params["prompt"] = prompt
 
             logging.info("Sending request to Replicate API")
             output = await replicate.async_run(

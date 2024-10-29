@@ -71,18 +71,9 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         logging.info(f"Starting variation generation for prompt: {prompt}")
         status_message = await update.message.reply_text("⏳ Generando variaciones...")
 
+        # Generate 3 variations - each will have a random seed
         for i in range(3):
-            variation_params = params.copy()
-            variation_params["seed"] = random.randint(1, 1000000)
-            logging.debug(
-                f"Generating variation {i+1}/3 with seed: {variation_params['seed']}"
-            )
-
-            result = await ReplicateService.generate_image(
-                prompt,
-                user_id=user_id,
-                custom_params=variation_params,
-            )
+            result = await ReplicateService.generate_image(prompt, user_id=user_id)
 
             if result and isinstance(result, tuple):
                 image_url, prediction_id, input_params = result
