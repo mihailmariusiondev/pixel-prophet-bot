@@ -10,9 +10,9 @@ from .handlers import (
     download_handler,
     config_handler,
     variations_handler,
-    last_generation_handler,  # Añadir esta línea
+    last_generation_handler,
+    analyze_image_handler,
 )
-from dotenv import load_dotenv
 from .utils.logging_config import setup_logging
 
 
@@ -20,12 +20,8 @@ def run_bot():
     """
     Initialize and run the Telegram bot.
     """
-
     # Setup logging
     setup_logging()
-
-    # Añade esta línea al principio de la función
-    load_dotenv()
 
     logging.info("Starting bot initialization...")
     # Create the Application and pass it your bot's token
@@ -44,30 +40,16 @@ def run_bot():
 
     # Register all handlers
     logging.info("Registering command handlers...")
-    application.add_handler(
-        CommandHandler("start", start_handler)
-    )  # Handle /start command
-    application.add_handler(
-        CommandHandler("help", help_handler)
-    )  # Handle /help command
-    application.add_handler(
-        CommandHandler("about", about_handler)
-    )  # Handle /about command
-    application.add_handler(
-        CommandHandler("generate", generate_handler)
-    )  # Handle /generate command
-    application.add_handler(
-        CommandHandler("download", download_handler)
-    )  # Handle /download command
-    application.add_handler(
-        CommandHandler("config", config_handler)
-    )  # Handle /config command
-    application.add_handler(
-        CommandHandler("variations", variations_handler)
-    )  # Añadir esta línea
-    application.add_handler(
-        CommandHandler("last_generation", last_generation_handler)
-    )
+    application.add_handler(CommandHandler("start", start_handler))
+    application.add_handler(CommandHandler("help", help_handler))
+    application.add_handler(CommandHandler("about", about_handler))
+    application.add_handler(CommandHandler("generate", generate_handler))
+    application.add_handler(CommandHandler("download", download_handler))
+    application.add_handler(CommandHandler("config", config_handler))
+    application.add_handler(CommandHandler("variations", variations_handler))
+    application.add_handler(CommandHandler("last_generation", last_generation_handler))
+
+    application.add_handler(MessageHandler(filters.PHOTO, analyze_image_handler))
     logging.info("Command handlers registered")
 
     # Register error handler

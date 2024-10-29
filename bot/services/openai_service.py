@@ -1,8 +1,10 @@
 import openai
 import os
+from openai import OpenAI
+import logging
 
-# Set the OpenAI API key from environment variables
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# Initialize OpenAI client with API key
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 async def chat_completion(
@@ -10,11 +12,13 @@ async def chat_completion(
 ):
     """
     Generic function to make a chat completion request to the OpenAI API.
-    :param messages: List of dictionaries with chat messages.
-    :param model: OpenAI model to use (default "gpt-3.5-turbo").
-    :param temperature: Controls randomness of the output (0.0 to 1.0).
-    :param max_tokens: Maximum number of tokens in the response (optional).
-    :return: The content of the generated response.
+    Args:
+        messages: List of dictionaries with chat messages.
+        model: OpenAI model to use (default "gpt-3.5-turbo").
+        temperature: Controls randomness of the output (0.0 to 1.0).
+        max_tokens: Maximum number of tokens in the response (optional).
+    Returns:
+        The content of the generated response.
     """
     try:
         # Make a request to the OpenAI API for chat completion
@@ -26,17 +30,19 @@ async def chat_completion(
         )
         return response.choices[0].message["content"]
     except Exception as e:
-        print(f"Error en chat completion: {e}")
+        logging.error(f"Error in chat completion: {e}")
         return None
 
 
 async def transcribe_audio(file_path, model="whisper-1", language=None):
     """
     Function to transcribe audio using OpenAI's Whisper model.
-    :param file_path: Path to the audio file to transcribe.
-    :param model: Whisper model to use (default "whisper-1").
-    :param language: Optional ISO-639-1 language code (e.g., "es" for Spanish).
-    :return: The transcribed text.
+    Args:
+        file_path: Path to the audio file to transcribe.
+        model: Whisper model to use (default "whisper-1").
+        language: Optional ISO-639-1 language code (e.g., "es" for Spanish).
+    Returns:
+        The transcribed text.
     """
     try:
         # Open the audio file and transcribe it using OpenAI's API
@@ -46,5 +52,40 @@ async def transcribe_audio(file_path, model="whisper-1", language=None):
             )
         return transcription["text"]
     except Exception as e:
-        print(f"Error en la transcripción de audio: {e}")
+        logging.error(f"Error in audio transcription: {e}")
+        return None
+
+
+async def analyze_image(image_url: str) -> str:
+    """
+    Analyzes an image using OpenAI's GPT-4 model and returns a description in English.
+    Args:
+        image_url: URL of the image to analyze
+    Returns:
+        str: Description of the image with MARIUS prefix
+    """
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4-vision",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "Create a detailed image generation prompt based on this image. Focus on describing the main subject, composition, lighting, mood, and style. Keep it concise but descriptive. Write in English and focus on visual elements that would be important for image generation.",
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": image_url,
+                        },
+                    ],
+                }
+            ],
+            max_tokens=300,
+        )
+
+        return response.choices[0].message.content
+    except Exception as e:
+        logging.error(f"Error analyzing image: {e}", exc_info=True)
         return None
