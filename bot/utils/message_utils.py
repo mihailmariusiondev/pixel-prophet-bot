@@ -1,33 +1,34 @@
 import json
 import logging
 
+
 def format_generation_message(prediction_id: str, input_params: str) -> str:
     """
-    Format a consistent message for image generation results.
+    Format a consistent message for image generation results showing only relevant parameters.
     Args:
         prediction_id: ID of the prediction
-        input_params: JSON string or dict of input parameters
+        input_params: JSON string of input parameters
     Returns:
         Formatted message string ready to be sent with parse_mode="Markdown"
     """
     try:
-        # Handle input_params whether it's a string or dict
-        if isinstance(input_params, str):
-            formatted_params = json.dumps(json.loads(input_params), indent=2)
-        elif isinstance(input_params, dict):
-            formatted_params = json.dumps(input_params, indent=2)
-        else:
-            logging.warning(f"Unexpected input_params type: {type(input_params)}")
-            formatted_params = str(input_params)
+        params = json.loads(input_params)
+
+        # Filter only relevant parameters
+        relevant_params = {
+            "guidance_scale": params.get("guidance_scale"),
+            "prompt_strength": params.get("prompt_strength"),
+            "num_inference_steps": params.get("num_inference_steps"),
+            "seed": params.get("seed"),
+        }
+
+        return (
+            f"🆔 `{prediction_id}`\n\n"
+            f"⚙️ *Parámetros:*\n"
+            f"```json\n{json.dumps(relevant_params, indent=2)}\n```\n\n"
+            f"💡 `/variations {prediction_id}`"
+        )
+
     except json.JSONDecodeError:
         logging.warning(f"Failed to parse input_params as JSON: {input_params}")
-        formatted_params = str(input_params)
-
-    return (
-        f"🖼️ *Nueva generación:*\n\n"
-        f"📋 [Ver en Replicate](https://replicate.com/p/{prediction_id})\n"
-        f"🆔 ID: `{prediction_id}`\n\n"
-        f"⚙️ *Parámetros:*\n"
-        f"```json\n{formatted_params}\n```\n\n"
-        f"💡 Usa `/variations {prediction_id}` para generar variaciones"
-    )
+        return f"🆔 `{prediction_id}`"
