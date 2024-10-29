@@ -214,7 +214,7 @@ class Database:
         Args:
             user_id: Telegram user ID
         Returns:
-            tuple: (prompt, input_params, output_url) or None if not found
+            tuple: (prompt, input_params, output_url, prediction_id) or None if not found
         """
         try:
             logging.debug(f"Retrieving last prediction for user {user_id}")
@@ -222,7 +222,7 @@ class Database:
                 cursor = conn.cursor()
                 cursor.execute(
                     """
-                    SELECT prompt, input_params, output_url
+                    SELECT prompt, input_params, output_url, prediction_id
                     FROM predictions
                     WHERE user_id = ?
                     ORDER BY created_at DESC
