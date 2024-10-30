@@ -3,10 +3,12 @@ from telegram.ext import ContextTypes
 from ..services.replicate_service import ReplicateService
 from ..utils.database import Database
 import logging
+from ..utils.decorators import require_configured
 
 db = Database()
 
 
+@require_configured
 async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Handle the /variations command to generate variations of a specific prediction.
@@ -14,10 +16,8 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     user_id = update.effective_user.id
     username = update.effective_user.username or "Unknown"
     logging.info(f"Variations requested by user {user_id} ({username})")
-
     # Get user's current configuration
     params = db.get_user_config(user_id, ReplicateService.default_params.copy())
-
     # Handle specific prediction ID if provided
     if context.args:
         prediction_id = context.args[0]
@@ -49,20 +49,16 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             )
             return
         params["prompt"] = last_prediction[0]
-
     try:
         status_message = await update.message.reply_text("⏳ Generando variaciones...")
-
         # Generate 3 variations
         for i in range(3):
             await ReplicateService.generate_image(
                 params["prompt"], user_id=user_id, message=update.message
             )
-
         await status_message.edit_text(
             "✅ Proceso completado: 3 variaciones generadas."
         )
-
     except Exception as e:
         logging.error(f"Error en variations_handler: {e}", exc_info=True)
         await update.message.reply_text(

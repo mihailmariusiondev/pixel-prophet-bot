@@ -7,7 +7,8 @@ This is a template for creating a Telegram bot using Python. It is designed to b
 - Basic command handling (/start, /help, /about)
 - Text message handling
 - Detailed error logging
-- Integration with OpenAI API for audio transcription and text generation
+- Integration with OpenAI API for image analysis and prompt generation
+- Configuration options for `trigger_word` and `model_endpoint`
 - Logging configuration for monitoring and debugging
 
 ## Requirements
@@ -16,6 +17,7 @@ This is a template for creating a Telegram bot using Python. It is designed to b
 - Telegram account
 - Telegram bot token
 - OpenAI API key
+- Replicate API access
 
 ## Initial Setup
 
@@ -25,6 +27,7 @@ To customize this template for your own Telegram bot, follow these steps:
 
    - **Telegram Bot Token**: Create a bot using BotFather and get the token.
    - **OpenAI API Key**: Sign up at OpenAI and generate an API key.
+   - **Replicate API Key**: Sign up at [Replicate](https://replicate.com/) and obtain an API key.
 
 2. **Set Environment Variables**:
 
@@ -32,6 +35,7 @@ To customize this template for your own Telegram bot, follow these steps:
      ```plaintext
      BOT_TOKEN=your_telegram_bot_token
      OPENAI_API_KEY=your_openai_api_key
+     REPLICATE_API_TOKEN=your_replicate_api_token
      ```
 
 3. **Modify Handlers**:
@@ -68,6 +72,8 @@ To customize this template for your own Telegram bot, follow these steps:
    cd repo-name
    ```
 
+````
+
 2. Create a virtual environment with Conda:
    ```bash
    conda env create -f environment.yml
@@ -96,12 +102,52 @@ To start the bot, follow these steps:
 
 5. To stop the bot, press Ctrl+C in the terminal.
 
+## Configuration
+
+Before using most of the bot's features, you need to set up two essential configurations: `trigger_word` and `model_endpoint`.
+
+### Setting Up Configurations
+
+1. **Trigger Word (`trigger_word`)**:
+
+   - Required for LoRA training.
+   - Example:
+     ```
+     /config trigger_word MARIUS
+     ```
+
+2. **Model Endpoint (`model_endpoint`)**:
+   - The API endpoint for image generation.
+   - Example:
+     ```
+     /config model_endpoint mihailmariusiondev/marius-flux:422d4bddab17dadb069e1956009fd55d58ba6c8fd5c8d4a071241b36a7cba3c7
+     ```
+
+You can view your current configurations using:
+
+```
+/config
+```
+
+### Example Usage
+
+- **Setting Trigger Word**:
+
+  ```
+  /config trigger_word MARIUS
+  ```
+
+- **Setting Model Endpoint**:
+  ```
+  /config model_endpoint mihailmariusiondev/marius-flux:422d4bddab17dadb069e1956009fd55d58ba6c8fd5c8d4a071241b36a7cba3c7
+  ```
+
 ## Project Structure
 
 - `bot/`: Contains the main bot logic
   - `handlers/`: Command and message handlers
-  - `services/`: Services for transcription and OpenAI
-  - `utils/`: Utilities for configuration and logging
+  - `services/`: Services for image generation and OpenAI interactions
+  - `utils/`: Utilities for configuration, logging, and decorators
 - `main.py`: Application entry point
 
 ## Starting a New Project
@@ -150,3 +196,4 @@ Contributions are welcome. Please open an issue to discuss major changes before 
 ## License
 
 [MIT](https://choosealicense.com/licenses/mit/)
+````

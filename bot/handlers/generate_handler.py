@@ -1,14 +1,16 @@
+# bot/handlers/generate_handler.py
+
 from telegram import Update
 from telegram.ext import ContextTypes
 from ..services.replicate_service import ReplicateService
 import logging
+from ..utils.decorators import require_configured
+from ..utils.database import Database
 
-# Diccionario para almacenar las colas de prompts por usuario
-user_queues = {}
-# Diccionario para rastrear si un usuario está procesando actualmente
-processing_status = {}
+db = Database()
 
 
+@require_configured
 async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Handle the /generate command to create images from text.
@@ -16,14 +18,12 @@ async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     username = update.effective_user.username or "Unknown"
     logging.info(f"Generate command received from user {user_id} ({username})")
-
     # Extract prompt from message
     prompt = (
         update.message.text.split(" ", 1)[1]
         if len(update.message.text.split(" ", 1)) > 1
         else ""
     )
-
     # Validate prompt presence
     if not prompt:
         logging.warning(f"Empty prompt received from user {user_id}")
@@ -31,13 +31,19 @@ async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Por favor, proporciona un prompt para generar la imagen."
         )
         return
-
     try:
+        # Fetch user configuration
+        config = db.get_user_config(user_id, ReplicateService.default_params.copy())
+        trigger_word = config.get("trigger_word")
+        model_endpoint = config.get("model_endpoint")
+
+        # Optionally, prepend trigger_word to the prompt
+        full_prompt = f"{trigger_word} {prompt}"
+
         # Generate image and send results
         await ReplicateService.generate_image(
-            prompt, user_id=user_id, message=update.message
+            full_prompt, user_id=user_id, message=update.message
         )
-
     except Exception as e:
         logging.error(
             f"Error in generate_handler for user {user_id}: {str(e)}", exc_info=True

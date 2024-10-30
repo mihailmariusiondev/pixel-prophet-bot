@@ -1,13 +1,14 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 import logging
+from ..utils.decorators import require_configured
 
 
+@require_configured
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Provides comprehensive help information about bot commands and features.
     Organizes help content into sections for better readability.
-
     Args:
         update: Telegram update object
         context: Bot context
@@ -15,8 +16,9 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     username = update.effective_user.username or "Unknown"
     chat_id = update.effective_chat.id
-    logging.info(f"Help command received from user {user_id} ({username}) in chat {chat_id}")
-
+    logging.info(
+        f"Help command received from user {user_id} ({username}) in chat {chat_id}"
+    )
     try:
         logging.debug(f"Preparing help sections for user {user_id}")
         # Structure help text into sections
@@ -35,7 +37,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "configuration": (
                 "*Configuración:*\n"
                 "`/config` \\- Ver tu configuración actual\n"
-                "`/config <param> <valor>` \\- Modifica un parámetro\n"
+                "`/config <parámetro> <valor>` \\- Modifica un parámetro\n"
             ),
             "basic_commands": (
                 "*Otros comandos:*\n"
@@ -55,28 +57,27 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "• Si usas variations sin ID, se usará tu última generación\n"
                 "• Usa config para personalizar los parámetros de generación\n"
                 "• El comando fashion genera 3 imágenes de moda masculina automáticamente"
-            )
+            ),
         }
-
         # Combine all sections
-        help_text = "\n\n".join([
-            "*🤖 Guía de PixelProphetBot*\n",
-            help_sections["main_commands"],
-            help_sections["other_features"],
-            help_sections["configuration"],
-            help_sections["basic_commands"],
-            help_sections["examples"],
-            help_sections["tips"]
-        ])
-
+        help_text = "\n\n".join(
+            [
+                "*🤖 Guía de PixelProphetBot*\n",
+                help_sections["main_commands"],
+                help_sections["other_features"],
+                help_sections["configuration"],
+                help_sections["basic_commands"],
+                help_sections["examples"],
+                help_sections["tips"],
+            ]
+        )
         logging.debug(f"Sending help message to user {user_id}")
         await update.message.reply_text(help_text, parse_mode="MarkdownV2")
         logging.info(f"Help message successfully sent to user {user_id}")
-
     except Exception as e:
         logging.error(
             f"Error sending help message to user {user_id} in chat {chat_id}: {str(e)}",
-            exc_info=True
+            exc_info=True,
         )
         await update.message.reply_text(
             "❌ Error al mostrar la ayuda. Por favor, intenta nuevamente."
