@@ -56,7 +56,9 @@ async def fashion_prompts_handler(update: Update, context: ContextTypes.DEFAULT_
                 clean_prompt = " ".join(prompt.strip().split())
                 if clean_prompt.startswith(trigger_word):
                     prompts.append(clean_prompt)
-                    logging.info(f"Valid prompt {i+1} generated - User: {user_id}")
+                    logging.info(
+                        f"Valid prompt {i+1} generated - User: {user_id} - Prompt: {clean_prompt}..."
+                    )
                 else:
                     logging.warning(
                         f"Invalid prompt format {i+1} (missing trigger word) - User: {user_id}"
