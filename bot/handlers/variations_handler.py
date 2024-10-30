@@ -19,7 +19,7 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     # Get user's current configuration
     params = db.get_user_config(user_id, ReplicateService.default_params.copy())
-    logging.debug(f"User {user_id} configuration fetched for variations: {params}")
+    logging.info(f"User {user_id} configuration fetched for variations: {params}")
 
     # Handle specific prediction ID if provided
     if context.args:
@@ -41,7 +41,7 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         # Extract prompt from prediction data
         prompt, input_params, _ = prediction_data
         params["prompt"] = prompt
-        logging.debug(f"Using prompt from prediction ID {prediction_id} for variations")
+        logging.info(f"Using prompt from prediction ID {prediction_id} for variations")
     else:
         # Get last prediction from database for this user
         last_prediction = db.get_last_prediction(user_id)
@@ -53,7 +53,7 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             )
             return
         params["prompt"] = last_prediction[0]
-        logging.debug(f"Using last prediction ID {last_prediction[3]} for variations")
+        logging.info(f"Using last prediction ID {last_prediction[3]} for variations")
 
     try:
         status_message = await update.message.reply_text("⏳ Generando variaciones...")
@@ -61,7 +61,7 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
         # Generate 3 variations
         for i in range(3):
-            logging.debug(f"Generating variation {i+1}/3 for user {user_id}")
+            logging.info(f"Generating variation {i+1}/3 for user {user_id}")
             await ReplicateService.generate_image(
                 params["prompt"], user_id=user_id, message=update.message
             )

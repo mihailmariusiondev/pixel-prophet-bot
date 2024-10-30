@@ -20,7 +20,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Help command received from user {user_id} ({username}) in chat {chat_id}"
     )
     try:
-        logging.debug(f"Preparing help sections for user {user_id}")
+        logging.info(f"Preparing help sections for user {user_id}")
         # Structure help text into sections
         help_sections = {
             "main_commands": (
@@ -71,7 +71,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 help_sections["tips"],
             ]
         )
-        logging.debug(f"Sending help message to user {user_id}")
+        logging.info(f"Sending help message to user {user_id}")
         await update.message.reply_text(help_text, parse_mode="MarkdownV2")
         logging.info(f"Help message successfully sent to user {user_id}")
     except Exception as e:

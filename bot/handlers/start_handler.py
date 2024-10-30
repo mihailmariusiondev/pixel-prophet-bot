@@ -34,7 +34,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "¡Una vez configurados, estarás listo para comenzar a crear!"
     )
     try:
-        logging.debug(f"Sending welcome message to user {user_id}")
+        logging.info(f"Sending welcome message to user {user_id}")
         await update.message.reply_text(welcome_text, parse_mode="Markdown")
         logging.info(f"Welcome message sent successfully to user {user_id}")
     except Exception as e:

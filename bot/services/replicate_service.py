@@ -51,10 +51,10 @@ class ReplicateService:
                 input_params = db.get_user_config(
                     user_id, ReplicateService.default_params.copy()
                 )
-                logging.debug(f"Using user-specific configuration for user {user_id}")
+                logging.info(f"Using user-specific configuration for user {user_id}")
             else:
                 input_params = ReplicateService.default_params.copy()
-                logging.debug("Using default configuration")
+                logging.info("Using default configuration")
 
             trigger_word = input_params.get("trigger_word")
             model_endpoint = input_params.get("model_endpoint")

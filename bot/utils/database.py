@@ -69,7 +69,7 @@ class Database:
             dict: User's configuration or default if none exists
         """
         try:
-            logging.debug(f"Retrieving config for user {user_id}")
+            logging.info(f"Retrieving config for user {user_id}")
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
@@ -78,10 +78,10 @@ class Database:
                 result = cursor.fetchone()
 
                 if result:
-                    logging.debug(f"Found existing config for user {user_id}")
+                    logging.info(f"Found existing config for user {user_id}")
                     return json.loads(result[0])
                 else:
-                    logging.debug(f"No config found for user {user_id}, using default")
+                    logging.info(f"No config found for user {user_id}, using default")
                     return default_config
 
         except Exception as e:
@@ -99,7 +99,7 @@ class Database:
         """
         try:
             logging.info(f"Updating config for user {user_id}")
-            logging.debug(f"New config: {config}")
+            logging.info(f"New config: {config}")
 
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
@@ -111,7 +111,7 @@ class Database:
                     (user_id, json.dumps(config)),
                 )
                 conn.commit()
-                logging.debug(f"Successfully updated config for user {user_id}")
+                logging.info(f"Successfully updated config for user {user_id}")
 
         except Exception as e:
             logging.error(f"Error setting user config: {e}", exc_info=True)
@@ -171,7 +171,7 @@ class Database:
                     (prediction_id, user_id, prompt, input_params, output_url),
                 )
                 conn.commit()
-                logging.debug(
+                logging.info(
                     f"Successfully saved prediction {prediction_id} for user {user_id}"
                 )
         except Exception as e:
@@ -187,7 +187,7 @@ class Database:
             tuple: (prompt, input_params, output_url) or None if not found
         """
         try:
-            logging.debug(f"Retrieving prediction data for ID: {prediction_id}")
+            logging.info(f"Retrieving prediction data for ID: {prediction_id}")
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 cursor.execute(
@@ -200,9 +200,9 @@ class Database:
                 )
                 result = cursor.fetchone()
                 if result:
-                    logging.debug(f"Found prediction data for ID: {prediction_id}")
+                    logging.info(f"Found prediction data for ID: {prediction_id}")
                 else:
-                    logging.debug(f"No prediction data found for ID: {prediction_id}")
+                    logging.info(f"No prediction data found for ID: {prediction_id}")
                 return result
         except Exception as e:
             logging.error(f"Error retrieving prediction: {e}", exc_info=True)
@@ -217,7 +217,7 @@ class Database:
             tuple: (prompt, input_params, output_url, prediction_id) or None if not found
         """
         try:
-            logging.debug(f"Retrieving last prediction for user {user_id}")
+            logging.info(f"Retrieving last prediction for user {user_id}")
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 cursor.execute(

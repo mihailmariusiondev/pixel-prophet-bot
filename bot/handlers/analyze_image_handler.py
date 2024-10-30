@@ -29,7 +29,7 @@ async def analyze_image_handler(update: Update, context: ContextTypes.DEFAULT_TY
         photo = update.message.photo[-1]
         file = await context.bot.get_file(photo.file_id)
         image_url = file.file_path
-        logging.debug(f"Retrieved image URL for user {user_id}: {image_url}")
+        logging.info(f"Retrieved image URL for user {user_id}: {image_url}")
 
         # Send initial status message
         status_message = await update.message.reply_text("🔍 Analyzing image...")
@@ -112,11 +112,11 @@ Format the response as a single, detailed prompt that captures all these element
         await update.message.reply_text(
             f"📝 *Generated Description:*\n`{description}`", parse_mode="Markdown"
         )
-        logging.debug(f"Description sent to user {user_id}")
+        logging.info(f"Description sent to user {user_id}")
 
         # Update status for image generation
         await status_message.edit_text("⏳ Generando imagen...")
-        logging.debug(f"Starting image generation based on analysis for user {user_id}")
+        logging.info(f"Starting image generation based on analysis for user {user_id}")
         logging.info(
             f"Generated description for user {user_id}: {description[:100]}..."
         )  # Log first 100 chars

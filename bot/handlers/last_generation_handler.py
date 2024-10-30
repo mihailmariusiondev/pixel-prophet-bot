@@ -23,7 +23,7 @@ async def last_generation_handler(update: Update, context: ContextTypes.DEFAULT_
     try:
         # Get last prediction from database
         last_prediction = db.get_last_prediction(user_id)
-        logging.debug(f"Retrieved last prediction for user {user_id}: {last_prediction}")
+        logging.info(f"Retrieved last prediction for user {user_id}: {last_prediction}")
 
         if not last_prediction:
             logging.warning(f"No previous predictions found for user {user_id}")
@@ -41,7 +41,7 @@ async def last_generation_handler(update: Update, context: ContextTypes.DEFAULT_
             format_generation_message(prediction_id, input_params),
             parse_mode="Markdown",
         )
-        logging.debug(f"Sent generation details to user {user_id}")
+        logging.info(f"Sent generation details to user {user_id}")
 
         # Then send the image
         await update.message.reply_photo(

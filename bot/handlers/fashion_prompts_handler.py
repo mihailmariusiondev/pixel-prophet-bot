@@ -25,7 +25,9 @@ async def fashion_prompts_handler(update: Update, context: ContextTypes.DEFAULT_
         trigger_word = config.get("trigger_word")
         model_endpoint = config.get("model_endpoint")
 
-        logging.debug(f"User {user_id} configuration fetched: Trigger Word='{trigger_word}', Model Endpoint='{model_endpoint}'")
+        logging.info(
+            f"User {user_id} configuration fetched: Trigger Word='{trigger_word}', Model Endpoint='{model_endpoint}'"
+        )
 
         # Send initial status message
         status_message = await update.message.reply_text(
@@ -53,11 +55,11 @@ Follow these restrictions:
 - ABSOLUTELY ESSENTIAL: In every prompt, explicitly state the subject's gaze direction, ensuring it is not towards the camera while keeping the face visible and engaging.
 Return ONLY the prompt text, no additional formatting or explanations. The prompt must be a single, coherent sentence."""
 
-        logging.debug(f"System prompt for OpenAI generated for user {user_id}")
+        logging.info(f"System prompt for OpenAI generated for user {user_id}")
 
         # Generate three unique prompts
         for i in range(3):
-            logging.debug(f"Generating prompt {i+1}/3 for user {user_id}")
+            logging.info(f"Generating prompt {i+1}/3 for user {user_id}")
             prompt = await chat_completion(
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -73,9 +75,8 @@ Return ONLY the prompt text, no additional formatting or explanations. The promp
                 clean_prompt = " ".join(prompt.strip().split())
                 if clean_prompt.startswith(trigger_word):
                     prompts.append(clean_prompt)
-                    logging.debug(
-                        f"Generated valid prompt {i+1}: {clean_prompt[:100]}..."
-                    )
+                    # Log the full generated prompt for analysis
+                    logging.info(f"Generated prompt {i+1}/3:\n{clean_prompt}")
                 else:
                     logging.warning(
                         f"Generated prompt {i+1} invalid - doesn't start with {trigger_word}"
@@ -95,10 +96,15 @@ Return ONLY the prompt text, no additional formatting or explanations. The promp
         await status_message.edit_text(
             "🎨 Generando imágenes a partir de los prompts..."
         )
-        logging.debug(f"Updated status message to user {user_id} for image generation")
+        logging.info(f"Updated status message to user {user_id} for image generation")
 
         for i, prompt in enumerate(prompts, 1):
-            logging.debug(f"Generating image {i}/{len(prompts)} for user {user_id}")
+            logging.info(f"Generating image {i}/{len(prompts)} for user {user_id}")
+
+            # Log the prompt being sent to Replicate
+            logging.info(f"Sending prompt {i}/3 to Replicate:\n{prompt}")
+
+            # Call Replicate API to generate image
             await ReplicateService.generate_image(
                 prompt, user_id=user_id, message=update.message
             )
