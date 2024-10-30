@@ -46,6 +46,15 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Handle the /config command to view or modify generation parameters.
     Only allows modification of specific approved parameters within defined limits.
+
+    Args:
+        update: Telegram update containing the message
+        context: Bot context containing parameter arguments
+
+    Flow:
+    1. If no args: shows current config and help
+    2. If args: validates and updates specified parameter
+    3. Shows updated configuration after changes
     """
     user_id = update.effective_user.id
     username = update.effective_user.username or "Unknown"
@@ -53,16 +62,20 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logging.info(
         f"Config command received from user {user_id} ({username}) with args: {args}"
     )
+
     try:
         # Show current config if no arguments
         if not args:
             logging.info(f"Showing current config for user {user_id}")
             config = db.get_user_config(user_id, ReplicateService.default_params)
+
             # Create ordered filtered config using ALLOWED_PARAMS order
             filtered_config = {
                 param: config.get(param) for param in ALLOWED_PARAMS if param in config
             }
-            # Create help message with parameter limits, properly escaped
+            logging.info(f"Filtered config for user {user_id}: {filtered_config}")
+
+            # Create help message with parameter limits
             help_text = (
                 "• `num_inference_steps`: Calidad/velocidad trade-off (1-50)\n"
                 "• `guidance_scale`: Controla qué tan cerca sigue el prompt (0-10)\n"
@@ -82,7 +95,6 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             logging.info(f"Sending current configuration to user {user_id}")
             await update.message.reply_text(message, parse_mode="Markdown")
-            logging.info(f"Current configuration sent to user {user_id}")
             return
 
         # Validate argument format
@@ -139,8 +151,6 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     raise ValueError(
                         f"Length must be entre {ALLOWED_PARAMS[param]['min_length']} y {ALLOWED_PARAMS[param]['max_length']} caracteres"
                     )
-            else:
-                raise ValueError("Unsupported parameter type")
             logging.info(
                 f"Parameter '{param}' validated successfully with value '{value}'"
             )
@@ -162,7 +172,7 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"Config updated - User: {user_id}, Param: {param}, Old: {old_value}, New: {value}"
         )
 
-        # Show updated config (filtered to allowed params only)
+        # Show updated config
         filtered_config = {k: v for k, v in config.items() if k in ALLOWED_PARAMS}
         message = (
             "✅ *Parámetro actualizado:*\n"
@@ -172,7 +182,7 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         logging.info(f"Sending updated configuration to user {user_id}")
         await update.message.reply_text(message, parse_mode="Markdown")
-        logging.info(f"Updated configuration sent to user {user_id}")
+
     except Exception as e:
         logging.error(f"Error in config_handler for user {user_id}: {e}", exc_info=True)
         await update.message.reply_text(

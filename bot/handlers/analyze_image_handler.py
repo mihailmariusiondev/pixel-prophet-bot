@@ -17,6 +17,13 @@ async def analyze_image_handler(update: Update, context: ContextTypes.DEFAULT_TY
     Args:
         update: Telegram update containing the image
         context: Bot context for maintaining state
+
+    Flow:
+    1. Validates image presence
+    2. Gets user configuration
+    3. Retrieves image URL
+    4. Generates description using OpenAI
+    5. Generates similar image using description
     """
     try:
         user_id = update.effective_user.id
@@ -32,6 +39,9 @@ async def analyze_image_handler(update: Update, context: ContextTypes.DEFAULT_TY
         # Get user configuration
         config = db.get_user_config(user_id, ReplicateService.default_params.copy())
         trigger_word = config.get("trigger_word")
+        logging.info(
+            f"Retrieved user config - User: {user_id}, Trigger word: {trigger_word}"
+        )
 
         # Get highest resolution image from message
         photo = update.message.photo[-1]
@@ -44,6 +54,7 @@ async def analyze_image_handler(update: Update, context: ContextTypes.DEFAULT_TY
         logging.info(f"Started image analysis - User: {user_id}")
 
         # Request image description from OpenAI
+        logging.info(f"Requesting OpenAI description - User: {user_id}")
         description = await chat_completion(
             messages=get_image_analysis_messages(trigger_word, image_url),
             temperature=0.7,
@@ -60,19 +71,21 @@ async def analyze_image_handler(update: Update, context: ContextTypes.DEFAULT_TY
         await status_message.delete()
 
         # Send the description to user
+        logging.info(f"Sending description to user - User: {user_id}")
         await update.message.reply_text(
             f"📝 *Generated Description:*\n`{description}`", parse_mode="Markdown"
         )
         logging.info(f"Description sent to user - User: {user_id}")
 
         # Generate image based on description
+        logging.info(f"Starting image generation from description - User: {user_id}")
         await ReplicateService.generate_image(
             description,
             user_id=user_id,
             message=update.message,
             operation_type="analysis",
         )
-        logging.info(f"Image generation initiated - User: {user_id}")
+        logging.info(f"Image generation completed - User: {user_id}")
 
     except Exception as e:
         logging.error(

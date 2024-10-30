@@ -15,6 +15,15 @@ async def fashion_prompts_handler(update: Update, context: ContextTypes.DEFAULT_
     """
     Generate multiple fashion prompts and create corresponding images.
     Uses OpenAI to generate fashion-specific prompts and creates images for each.
+
+    Args:
+        update: Telegram update containing the message
+        context: Bot context for maintaining state
+
+    Flow:
+    1. Gets user configuration
+    2. Generates 3 unique fashion prompts using OpenAI
+    3. Generates an image for each valid prompt
     """
     user_id = update.effective_user.id
     username = update.effective_user.username or "Unknown"
@@ -31,15 +40,11 @@ async def fashion_prompts_handler(update: Update, context: ContextTypes.DEFAULT_
 
         # Initialize prompts collection
         prompts = []
-
-        # Define system prompt for fashion generation
-        system_prompt = f"""You are a world-class prompt engineer..."""
-        logging.debug(f"System prompt prepared - User: {user_id}")
+        logging.info(f"Starting prompt generation - User: {user_id}")
 
         # Generate three unique prompts
         for i in range(3):
             logging.info(f"Generating prompt {i+1}/3 - User: {user_id}")
-
             # Request prompt from OpenAI
             prompt = await chat_completion(
                 messages=get_fashion_messages(trigger_word),
@@ -68,12 +73,19 @@ async def fashion_prompts_handler(update: Update, context: ContextTypes.DEFAULT_
             logging.info(
                 f"Starting image generation {i}/{len(prompts)} - User: {user_id}"
             )
-            await ReplicateService.generate_image(
-                prompt,
-                user_id=user_id,
-                message=update.message,
-                operation_type="fashion",
-            )
+            try:
+                await ReplicateService.generate_image(
+                    prompt,
+                    user_id=user_id,
+                    message=update.message,
+                    operation_type="fashion",
+                )
+                logging.info(f"Successfully generated image {i} - User: {user_id}")
+            except Exception as e:
+                logging.error(
+                    f"Failed to generate image {i} - User: {user_id}, Error: {str(e)}"
+                )
+                continue
 
     except Exception as e:
         logging.error(

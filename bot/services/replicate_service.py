@@ -32,7 +32,9 @@ class ReplicateService:
     }
 
     @staticmethod
-    async def generate_image(prompt, user_id=None, message=None, operation_type="single"):
+    async def generate_image(
+        prompt, user_id=None, message=None, operation_type="single"
+    ):
         """
         Generates an image using the Replicate API and handles all user communication.
 
@@ -51,7 +53,7 @@ class ReplicateService:
                 "single": "⏳ Generando imagen...",
                 "variation": "⏳ Generando variación...",
                 "fashion": "⏳ Generando imagen de moda...",
-                "analysis": "⏳ Generando imagen basada en análisis..."
+                "analysis": "⏳ Generando imagen basada en análisis...",
             }
 
             # Send initial status message if message object provided
@@ -59,7 +61,9 @@ class ReplicateService:
             if message:
                 status_text = status_messages.get(operation_type, "⏳ Procesando...")
                 status_message = await message.reply_text(status_text)
-                logging.info(f"Status message sent for {operation_type} operation - User: {user_id}")
+                logging.info(
+                    f"Status message sent for {operation_type} operation - User: {user_id}"
+                )
 
             # Get user config or default params
             if user_id is not None:
@@ -78,7 +82,9 @@ class ReplicateService:
             if not trigger_word or not model_endpoint:
                 logging.error(f"User {user_id} missing required configurations.")
                 if status_message:
-                    await status_message.edit_text("❌ Configuración incompleta. Por favor, establece la palabra clave y el endpoint del modelo usando el comando `/config`.")
+                    await status_message.edit_text(
+                        "❌ Configuración incompleta. Por favor, establece la palabra clave y el endpoint del modelo usando el comando `/config`."
+                    )
                 return None
 
             # Always randomize seed before generation
@@ -90,10 +96,14 @@ class ReplicateService:
                 input=input_params,
             )
             if not output:
-                error_msg = f"Empty response from Replicate - Operation: {operation_type}"
+                error_msg = (
+                    f"Empty response from Replicate - Operation: {operation_type}"
+                )
                 logging.error(error_msg)
                 if status_message:
-                    await status_message.edit_text("❌ Error en la generación de imagen")
+                    await status_message.edit_text(
+                        "❌ Error en la generación de imagen"
+                    )
                 return None
 
             # Process successful generation
@@ -124,7 +134,9 @@ class ReplicateService:
                     # Clean up status message
                     if status_message:
                         await status_message.delete()
-                        logging.debug(f"Deleted status message for {operation_type} operation")
+                        logging.info(
+                            f"Deleted status message for {operation_type} operation"
+                        )
 
                     # Send generation details
                     await message.reply_text(
@@ -134,8 +146,7 @@ class ReplicateService:
 
                     # Send generated image
                     await message.reply_photo(
-                        photo=image_url,
-                        caption="🖼️ Imagen generada"
+                        photo=image_url, caption="🖼️ Imagen generada"
                     )
 
                     logging.info(

@@ -9,9 +9,14 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Provides comprehensive help information about bot commands and features.
     Organizes help content into sections for better readability.
+
     Args:
-        update: Telegram update object
-        context: Bot context
+        update: Telegram update containing the message
+        context: Bot context for maintaining state
+
+    Flow:
+    1. Prepares help sections with command descriptions
+    2. Formats and sends help message to user
     """
     user_id = update.effective_user.id
     username = update.effective_user.username or "Unknown"
@@ -19,6 +24,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logging.info(
         f"Help command received from user {user_id} ({username}) in chat {chat_id}"
     )
+
     try:
         logging.info(f"Preparing help sections for user {user_id}")
         # Structure help text into sections
@@ -59,6 +65,8 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "• El comando fashion genera 3 imágenes de moda masculina automáticamente"
             ),
         }
+        logging.info(f"Help sections prepared for user {user_id}")
+
         # Combine all sections
         help_text = "\n\n".join(
             [
@@ -71,9 +79,11 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 help_sections["tips"],
             ]
         )
+
         logging.info(f"Sending help message to user {user_id}")
         await update.message.reply_text(help_text, parse_mode="MarkdownV2")
         logging.info(f"Help message successfully sent to user {user_id}")
+
     except Exception as e:
         logging.error(
             f"Error sending help message to user {user_id} in chat {chat_id}: {str(e)}",
