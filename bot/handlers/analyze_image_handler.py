@@ -3,6 +3,9 @@ from telegram.ext import ContextTypes
 import logging
 from ..services.openai_service import chat_completion
 from ..services.replicate_service import ReplicateService
+from ..utils.database import Database
+
+db = Database()
 
 
 async def analyze_image_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -25,6 +28,10 @@ async def analyze_image_handler(update: Update, context: ContextTypes.DEFAULT_TY
             await update.message.reply_text("❌ Please send an image to analyze.")
             return
 
+        # Get user configuration
+        config = db.get_user_config(user_id, ReplicateService.default_params.copy())
+        trigger_word = config.get("trigger_word")
+
         # Get highest resolution image from message
         photo = update.message.photo[-1]
         file = await context.bot.get_file(photo.file_id)
@@ -45,9 +52,12 @@ async def analyze_image_handler(update: Update, context: ContextTypes.DEFAULT_TY
                     "content": [
                         {
                             "type": "text",
-                            "text": """Return ONLY the descriptive text without any headers, formatting, or meta-text. Do not include phrases like 'Prompt for Image Generation' or any section markers.
+                            "text": f"""Return ONLY the descriptive text without any headers, formatting, or meta-text. Do not include phrases like 'Prompt for Image Generation' or any section markers.
 
 Analyze this image and create an extremely detailed generation prompt. Include ALL of the following aspects:
+
+Key elements to include:
+- ALL prompts MUST start with '{trigger_word}'
 
 1. Main Subject:
 - Precise description of the subject(s)
