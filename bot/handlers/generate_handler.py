@@ -13,53 +13,30 @@ db = Database()
 @require_configured
 async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
-    Handle the /generate command to create images from text.
+    Handles single image generation from text prompt.
+    Validates input and delegates to ReplicateService for generation.
     """
     user_id = update.effective_user.id
     username = update.effective_user.username or "Unknown"
-    logging.info(f"Generate command received from user {user_id} ({username})")
+    logging.info(f"Generate command received - User: {user_id} ({username})")
 
-    # Extract prompt from message
+    # Extract and validate prompt
     prompt = (
         update.message.text.split(" ", 1)[1]
         if len(update.message.text.split(" ", 1)) > 1
         else ""
     )
-    logging.info(f"Extracted prompt for user {user_id}: '{prompt}'")
 
-    # Validate prompt presence
     if not prompt:
-        logging.warning(f"Empty prompt received from user {user_id}")
+        logging.warning(f"Empty prompt received - User: {user_id}")
         await update.message.reply_text(
             "Por favor, proporciona un prompt para generar la imagen."
         )
         return
 
-    try:
-        # Send initial status message
-        status_message = await update.message.reply_text("⏳ Generando imagen...")
-
-        # Fetch user configuration
-        config = db.get_user_config(user_id, ReplicateService.default_params.copy())
-        trigger_word = config.get("trigger_word")
-        model_endpoint = config.get("model_endpoint")
-        logging.info(
-            f"User {user_id} configuration fetched: Trigger Word='{trigger_word}', Model Endpoint='{model_endpoint}'"
-        )
-
-        # Generate image and send results
-        await ReplicateService.generate_image(
-            prompt, user_id=user_id, message=update.message
-        )
-
-        # Update status message on completion
-        await status_message.edit_text("✅ ¡Imagen generada con éxito!")
-
-        logging.info(f"Image generation initiated for user {user_id}")
-    except Exception as e:
-        logging.error(
-            f"Error in generate_handler for user {user_id}: {str(e)}", exc_info=True
-        )
-        await update.message.reply_text(
-            "❌ Ocurrió un error inesperado. Por favor, intenta más tarde."
-        )
+    await ReplicateService.generate_image(
+        prompt,
+        user_id=user_id,
+        message=update.message,
+        operation_type="single"
+    )

@@ -1,5 +1,3 @@
-# bot/handlers/fashion_prompts_handler.py
-
 from telegram import Update
 from telegram.ext import ContextTypes
 import logging
@@ -7,6 +5,7 @@ from ..services.openai_service import chat_completion
 from ..services.replicate_service import ReplicateService
 from ..utils.database import Database
 from ..utils.decorators import require_configured
+from ..utils.prompt_templates import get_fashion_messages
 
 db = Database()
 
@@ -15,64 +14,70 @@ db = Database()
 async def fashion_prompts_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Generate multiple fashion prompts and create corresponding images.
+    Uses OpenAI to generate fashion-specific prompts and creates images for each.
     """
     user_id = update.effective_user.id
     username = update.effective_user.username or "Unknown"
-    logging.info(f"Fashion prompts generation requested by user {user_id} ({username})")
+    logging.info(f"Fashion prompts generation requested - User: {user_id} ({username})")
 
     try:
+        # Get user configuration
         config = db.get_user_config(user_id, ReplicateService.default_params.copy())
         trigger_word = config.get("trigger_word")
         model_endpoint = config.get("model_endpoint")
+        logging.info(
+            f"Configuration retrieved - User: {user_id}, Trigger Word: {trigger_word}"
+        )
 
+        # Initialize prompts collection
         prompts = []
-        system_prompt = f"""You are a world-class prompt engineer specializing in creating exceptional, highly detailed prompts for AI text-to-image tools. Your expertise lies in crafting prompts that result in photorealistic, hyper-realistic images.
-        Create a single prompt with these key elements:
-        - MUST start with '{trigger_word}'
-        - Subject must exude confidence through posture and environment interaction
-        - Include subtle athletic build description
-        - CRITICAL: Explicitly describe gaze direction (NOT at camera, but face must be visible)
-        Follow these restrictions:
-        - No shirtless/undressed scenarios
-        - No age specifications
-        - No sports/gym contexts
-        - Focus on professional/casual/formal settings
-        - No movement descriptions
-        - Elegant but not luxury-focused
-        - Pure description, no titles
-        - ABSOLUTELY ESSENTIAL: In every prompt, explicitly state the subject's gaze direction, ensuring it is not towards the camera while keeping the face visible and engaging.
-        Return ONLY the prompt text, no additional formatting or explanations. The prompt must be a single, coherent sentence."""
 
+        # Define system prompt for fashion generation
+        system_prompt = f"""You are a world-class prompt engineer..."""
+        logging.debug(f"System prompt prepared - User: {user_id}")
+
+        # Generate three unique prompts
         for i in range(3):
+            logging.info(f"Generating prompt {i+1}/3 - User: {user_id}")
+
+            # Request prompt from OpenAI
             prompt = await chat_completion(
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {
-                        "role": "user",
-                        "content": "Generate one fashion prompt following the guidelines exactly.",
-                    },
-                ],
+                messages=get_fashion_messages(trigger_word),
                 temperature=0.7,
             )
 
+            # Validate and clean prompt
             if prompt:
                 clean_prompt = " ".join(prompt.strip().split())
                 if clean_prompt.startswith(trigger_word):
                     prompts.append(clean_prompt)
+                    logging.info(f"Valid prompt {i+1} generated - User: {user_id}")
+                else:
+                    logging.warning(
+                        f"Invalid prompt format {i+1} (missing trigger word) - User: {user_id}"
+                    )
 
+        # Handle case where no valid prompts were generated
         if not prompts:
+            logging.error(f"No valid prompts generated - User: {user_id}")
             await update.message.reply_text("❌ Error generating prompts.")
             return
 
-        for prompt in prompts:
+        # Generate images for each valid prompt
+        for i, prompt in enumerate(prompts, 1):
+            logging.info(
+                f"Starting image generation {i}/{len(prompts)} - User: {user_id}"
+            )
             await ReplicateService.generate_image(
-                prompt, user_id=user_id, message=update.message
+                prompt,
+                user_id=user_id,
+                message=update.message,
+                operation_type="fashion",
             )
 
     except Exception as e:
         logging.error(
-            f"Error in fashion_prompts_handler for user {user_id}: {str(e)}",
-            exc_info=True,
+            f"Error in fashion_prompts_handler - User: {user_id}", exc_info=True
         )
         await update.message.reply_text(
             "❌ Ocurrió un error mientras se generaban los fashion prompts."

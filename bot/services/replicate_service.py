@@ -32,25 +32,35 @@ class ReplicateService:
     }
 
     @staticmethod
-    async def generate_image(prompt, user_id=None, message=None):
+    async def generate_image(prompt, user_id=None, message=None, operation_type="single"):
         """
-        Generates an image using the Replicate API and sends results to user if message provided.
+        Generates an image using the Replicate API and handles all user communication.
+
         Args:
             prompt: Text description for image generation
             user_id: Optional Telegram user ID for config lookup
-            message: Optional telegram message object to reply with results
+            message: Optional telegram message object for user communication
+            operation_type: Type of operation ("single", "variation", "fashion", "analysis")
+
         Returns:
             tuple: (image_url, prediction_id, parameters_json) or None on failure
         """
         try:
+            # Initialize status message based on operation type
+            status_messages = {
+                "single": "⏳ Generando imagen...",
+                "variation": "⏳ Generando variación...",
+                "fashion": "⏳ Generando imagen de moda...",
+                "analysis": "⏳ Generando imagen basada en análisis..."
+            }
+
             # Send initial status message if message object provided
             status_message = None
             if message:
-                status_message = await message.reply_text("⏳ Generando imagen...")
+                status_text = status_messages.get(operation_type, "⏳ Procesando...")
+                status_message = await message.reply_text(status_text)
+                logging.info(f"Status message sent for {operation_type} operation - User: {user_id}")
 
-            logging.info(
-                f"Starting image generation - User: {user_id}, Prompt: {prompt}"
-            )
             # Get user config or default params
             if user_id is not None:
                 input_params = db.get_user_config(
@@ -80,11 +90,15 @@ class ReplicateService:
                 input=input_params,
             )
             if not output:
+                error_msg = f"Empty response from Replicate - Operation: {operation_type}"
+                logging.error(error_msg)
                 if status_message:
-                    await status_message.edit_text("❌ Error al generar la imagen.")
-                logging.error("Replicate returned empty response")
+                    await status_message.edit_text("❌ Error en la generación de imagen")
                 return None
-            logging.info("Successfully received response from Replicate")
+
+            # Process successful generation
+            logging.info(f"Successfully generated image - Operation: {operation_type}")
+
             # Get prediction details
             predictions_page = replicate.predictions.list()
             if predictions_page.results:
@@ -103,27 +117,46 @@ class ReplicateService:
                     latest_prediction.id,
                     json.dumps(input_params, indent=2),
                 )
-                # Send results if message object provided
+                # Handle user communication for successful generation
                 if message and result:
                     image_url, prediction_id, input_params = result
+
+                    # Clean up status message
                     if status_message:
                         await status_message.delete()
+                        logging.debug(f"Deleted status message for {operation_type} operation")
+
+                    # Send generation details
                     await message.reply_text(
                         format_generation_message(prediction_id, input_params),
                         parse_mode="Markdown",
                     )
+
+                    # Send generated image
                     await message.reply_photo(
-                        photo=image_url, caption="🖼️ Imagen generada"
+                        photo=image_url,
+                        caption="🖼️ Imagen generada"
                     )
+
+                    logging.info(
+                        f"Successfully sent results to user - Operation: {operation_type}, "
+                        f"Prediction ID: {prediction_id}"
+                    )
+
                 return result
             else:
                 logging.error("No predictions found in response")
                 return None
         except replicate.exceptions.ReplicateError as e:
-            logging.error(f"Replicate API error: {e}", exc_info=True)
-            return None
-        except Exception as e:
+            error_msg = f"Replicate API error in {operation_type} operation: {str(e)}"
+            logging.error(error_msg, exc_info=True)
             if status_message:
-                await status_message.edit_text("❌ Error al generar la imagen.")
-            logging.error(f"Unexpected error in image generation: {e}", exc_info=True)
+                await status_message.edit_text("❌ Error en el servicio de generación")
+            return None
+
+        except Exception as e:
+            error_msg = f"Unexpected error in {operation_type} operation: {str(e)}"
+            logging.error(error_msg, exc_info=True)
+            if status_message:
+                await status_message.edit_text("❌ Error inesperado")
             return None
