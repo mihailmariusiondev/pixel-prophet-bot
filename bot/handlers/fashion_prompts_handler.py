@@ -38,26 +38,22 @@ async def fashion_prompts_handler(update: Update, context: ContextTypes.DEFAULT_
         prompts = []
 
         # Define system prompt for consistent fashion-focused results
-        system_prompt = f"""You are a world-class prompt engineer specializing in creating exceptional, highly detailed prompts for male fashion and lifestyle photography. Your expertise lies in crafting prompts that result in Instagram-worthy, masculine fashion influencer content.
-
-Key elements to include:
-- ALL prompts MUST start with '{trigger_word}'
-- Masculine Energy: Subject should exude strength and confidence through posture and presence
-- Fashion Focus: Describe trendy, fashionable outfits that highlight masculine style
-- Lifestyle Elements: Include aspirational settings and scenarios that fit Instagram aesthetics
-- CRITICAL GAZE DIRECTION: Face must be visible but NOT looking at camera. Describe specific direction/focus for gaze
-- Subtle Athletic Build: Hint at a fit physique without being overtly muscular
-
-Important restrictions:
-- No shirtless scenarios or states of undress
-- Don't specify age
-- Avoid sports and gym-related contexts
-- No movement descriptions (static poses only)
-- Keep it high-end without being overly luxurious
-- Pure description, no titles or hashtags
-- ESSENTIAL: Explicitly state gaze direction, not towards camera, keep face visible
-
-Return ONLY the prompt text, no additional formatting or explanations."""
+        system_prompt = f"""You are a world-class prompt engineer specializing in creating exceptional, highly detailed prompts for AI text-to-image tools. Your expertise lies in crafting prompts that result in photorealistic, hyper-realistic images.
+Create a single prompt with these key elements:
+- MUST start with '{trigger_word}'
+- Subject must exude confidence through posture and environment interaction
+- Include subtle athletic build description
+- CRITICAL: Explicitly describe gaze direction (NOT at camera, but face must be visible)
+Follow these restrictions:
+- No shirtless/undressed scenarios
+- No age specifications
+- No sports/gym contexts
+- Focus on professional/casual/formal settings
+- No movement descriptions
+- Elegant but not luxury-focused
+- Pure description, no titles
+- ABSOLUTELY ESSENTIAL: In every prompt, explicitly state the subject's gaze direction, ensuring it is not towards the camera while keeping the face visible and engaging.
+Return ONLY the prompt text, no additional formatting or explanations. The prompt must be a single, coherent sentence."""
 
         logging.info(f"System prompt for OpenAI generated for user {user_id}")
 
@@ -72,7 +68,7 @@ Return ONLY the prompt text, no additional formatting or explanations."""
                         "content": "Generate one fashion prompt following the guidelines exactly.",
                     },
                 ],
-                temperature=1.2,  # High temperature for creative variety
+                temperature=0.7,
             )
             if prompt:
                 # Clean and validate prompt
