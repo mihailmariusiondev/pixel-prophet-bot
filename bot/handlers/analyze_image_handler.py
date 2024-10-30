@@ -38,12 +38,6 @@ async def analyze_image_handler(update: Update, context: ContextTypes.DEFAULT_TY
         image_url = file.file_path
         logging.info(f"Retrieved image URL for user {user_id}: {image_url}")
 
-        # Send initial status message
-        status_message = await update.message.reply_text("🔍 Analyzing image...")
-        logging.info(
-            f"Starting image analysis for user {user_id} - File ID: {photo.file_id}"
-        )
-
         # Request image description from OpenAI
         description = await chat_completion(
             messages=[
@@ -115,7 +109,7 @@ Format the response as a single, detailed prompt that captures all these element
             logging.error(
                 f"Failed to generate description for image from user {user_id}"
             )
-            await status_message.edit_text("❌ Could not analyze the image.")
+            await update.message.reply_text("❌ Could not analyze the image.")
             return
 
         # Send the description as a new message
@@ -123,13 +117,6 @@ Format the response as a single, detailed prompt that captures all these element
             f"📝 *Generated Description:*\n`{description}`", parse_mode="Markdown"
         )
         logging.info(f"Description sent to user {user_id}")
-
-        # Update status for image generation
-        await status_message.edit_text("⏳ Generando imagen...")
-        logging.info(f"Starting image generation based on analysis for user {user_id}")
-        logging.info(
-            f"Generated description for user {user_id}: {description[:100]}..."
-        )  # Log first 100 chars
 
         # Generate new image and send results
         await ReplicateService.generate_image(

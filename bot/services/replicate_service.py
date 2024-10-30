@@ -43,6 +43,11 @@ class ReplicateService:
             tuple: (image_url, prediction_id, parameters_json) or None on failure
         """
         try:
+            # Send initial status message if message object provided
+            status_message = None
+            if message:
+                status_message = await message.reply_text("⏳ Generando imagen...")
+
             logging.info(
                 f"Starting image generation - User: {user_id}, Prompt: {prompt}"
             )
@@ -62,10 +67,8 @@ class ReplicateService:
             # Validate essential configurations
             if not trigger_word or not model_endpoint:
                 logging.error(f"User {user_id} missing required configurations.")
-                if message:
-                    await message.reply_text(
-                        "❌ Configuración incompleta. Por favor, establece la palabra clave y el endpoint del modelo usando el comando `/config`."
-                    )
+                if status_message:
+                    await status_message.edit_text("❌ Configuración incompleta. Por favor, establece la palabra clave y el endpoint del modelo usando el comando `/config`.")
                 return None
 
             # Always randomize seed before generation
@@ -77,6 +80,8 @@ class ReplicateService:
                 input=input_params,
             )
             if not output:
+                if status_message:
+                    await status_message.edit_text("❌ Error al generar la imagen.")
                 logging.error("Replicate returned empty response")
                 return None
             logging.info("Successfully received response from Replicate")
@@ -101,6 +106,8 @@ class ReplicateService:
                 # Send results if message object provided
                 if message and result:
                     image_url, prediction_id, input_params = result
+                    if status_message:
+                        await status_message.delete()
                     await message.reply_text(
                         format_generation_message(prediction_id, input_params),
                         parse_mode="Markdown",
@@ -116,7 +123,7 @@ class ReplicateService:
             logging.error(f"Replicate API error: {e}", exc_info=True)
             return None
         except Exception as e:
+            if status_message:
+                await status_message.edit_text("❌ Error al generar la imagen.")
             logging.error(f"Unexpected error in image generation: {e}", exc_info=True)
-            if message:
-                await message.reply_text("❌ Error al generar la imagen.")
             return None
