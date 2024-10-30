@@ -41,7 +41,6 @@ ALLOWED_PARAMS = {
     },
 }
 
-
 async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Handle the /config command to view or modify generation parameters.
@@ -80,8 +79,11 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Ejemplo:\n"
                 "`/config guidance_scale 7.5`"
             )
+            logging.debug(f"Sending current configuration to user {user_id}")
             await update.message.reply_text(message, parse_mode="Markdown")
+            logging.info(f"Current configuration sent to user {user_id}")
             return
+
         # Validate argument format
         if len(args) != 2:
             logging.warning(f"Invalid config format from user {user_id}: {args}")
@@ -89,7 +91,10 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "❌ Formato incorrecto. Usa:\n" "/config <parámetro> <valor>"
             )
             return
+
         param, value = args[0], args[1]
+        logging.debug(f"User {user_id} attempting to update parameter '{param}' with value '{value}'")
+
         # Validate parameter is allowed
         if param not in ALLOWED_PARAMS:
             logging.warning(f"Invalid parameter '{param}' requested by user {user_id}")
@@ -99,6 +104,7 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"{', '.join(ALLOWED_PARAMS.keys())}"
             )
             return
+
         # Convert and validate value
         try:
             if ALLOWED_PARAMS[param]["type"] == "float":
@@ -132,6 +138,7 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     )
             else:
                 raise ValueError("Unsupported parameter type")
+            logging.debug(f"Parameter '{param}' validated successfully with value '{value}'")
         except ValueError as e:
             logging.warning(
                 f"Invalid value for parameter {param} from user {user_id}: {value}. Error: {str(e)}"
@@ -140,6 +147,7 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"❌ Valor no válido para `{param}`.\n{str(e)}"
             )
             return
+
         # Update the config
         config = db.get_user_config(user_id, ReplicateService.default_params.copy())
         old_value = config.get(param)
@@ -148,6 +156,7 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logging.info(
             f"Config updated - User: {user_id}, Param: {param}, Old: {old_value}, New: {value}"
         )
+
         # Show updated config (filtered to allowed params only)
         filtered_config = {k: v for k, v in config.items() if k in ALLOWED_PARAMS}
         message = (
@@ -156,7 +165,9 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🛠️ *Configuración actual:*\n\n"
             f"`{json.dumps(filtered_config, indent=2)}`"
         )
+        logging.debug(f"Sending updated configuration to user {user_id}")
         await update.message.reply_text(message, parse_mode="Markdown")
+        logging.info(f"Updated configuration sent to user {user_id}")
     except Exception as e:
         logging.error(f"Error in config_handler for user {user_id}: {e}", exc_info=True)
         await update.message.reply_text(

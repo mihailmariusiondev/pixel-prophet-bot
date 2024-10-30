@@ -112,11 +112,11 @@ Format the response as a single, detailed prompt that captures all these element
         await update.message.reply_text(
             f"📝 *Generated Description:*\n`{description}`", parse_mode="Markdown"
         )
+        logging.debug(f"Description sent to user {user_id}")
 
         # Update status for image generation
         await status_message.edit_text("⏳ Generando imagen...")
         logging.debug(f"Starting image generation based on analysis for user {user_id}")
-
         logging.info(
             f"Generated description for user {user_id}: {description[:100]}..."
         )  # Log first 100 chars
@@ -125,7 +125,7 @@ Format the response as a single, detailed prompt that captures all these element
         await ReplicateService.generate_image(
             description, user_id=user_id, message=update.message
         )
-
+        logging.info(f"Image generation initiated for user {user_id}")
     except Exception as e:
         logging.error(
             f"Error in analyze_image_handler for user {user_id}: {str(e)}",

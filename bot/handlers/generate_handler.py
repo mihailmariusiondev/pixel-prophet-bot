@@ -24,6 +24,7 @@ async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if len(update.message.text.split(" ", 1)) > 1
         else ""
     )
+    logging.debug(f"Extracted prompt for user {user_id}: '{prompt}'")
     # Validate prompt presence
     if not prompt:
         logging.warning(f"Empty prompt received from user {user_id}")
@@ -36,14 +37,17 @@ async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         config = db.get_user_config(user_id, ReplicateService.default_params.copy())
         trigger_word = config.get("trigger_word")
         model_endpoint = config.get("model_endpoint")
+        logging.debug(f"User {user_id} configuration fetched: Trigger Word='{trigger_word}', Model Endpoint='{model_endpoint}'")
 
         # Optionally, prepend trigger_word to the prompt
         full_prompt = f"{trigger_word} {prompt}"
+        logging.info(f"Full prompt for image generation for user {user_id}: '{full_prompt}'")
 
         # Generate image and send results
         await ReplicateService.generate_image(
             full_prompt, user_id=user_id, message=update.message
         )
+        logging.info(f"Image generation initiated for user {user_id}")
     except Exception as e:
         logging.error(
             f"Error in generate_handler for user {user_id}: {str(e)}", exc_info=True

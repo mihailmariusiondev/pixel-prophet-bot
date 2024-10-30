@@ -25,13 +25,16 @@ async def fashion_prompts_handler(update: Update, context: ContextTypes.DEFAULT_
         trigger_word = config.get("trigger_word")
         model_endpoint = config.get("model_endpoint")
 
-        # No need to check configurations here since decorator enforces it
+        logging.debug(f"User {user_id} configuration fetched: Trigger Word='{trigger_word}', Model Endpoint='{model_endpoint}'")
 
         # Send initial status message
         status_message = await update.message.reply_text(
             "🎭 Generando fashion prompts..."
         )
+        logging.info(f"Sent initial status message to user {user_id}")
+
         prompts = []
+
         # Define system prompt for consistent fashion-focused results
         system_prompt = f"""You are a world-class prompt engineer specializing in creating exceptional, highly detailed prompts for AI text-to-image tools. Your expertise lies in crafting prompts that result in photorealistic, hyper-realistic images.
 Create a single prompt with these key elements:
@@ -49,6 +52,8 @@ Follow these restrictions:
 - Pure description, no titles
 - ABSOLUTELY ESSENTIAL: In every prompt, explicitly state the subject's gaze direction, ensuring it is not towards the camera while keeping the face visible and engaging.
 Return ONLY the prompt text, no additional formatting or explanations. The prompt must be a single, coherent sentence."""
+
+        logging.debug(f"System prompt for OpenAI generated for user {user_id}")
 
         # Generate three unique prompts
         for i in range(3):
@@ -77,10 +82,12 @@ Return ONLY the prompt text, no additional formatting or explanations. The promp
                     )
             else:
                 logging.error(f"Failed to generate prompt {i+1} for user {user_id}")
+
         if not prompts:
             logging.error(f"Failed to generate any valid prompts for user {user_id}")
             await status_message.edit_text("❌ Error generating prompts.")
             return
+
         # Generate images for each prompt
         logging.info(
             f"Starting image generation for {len(prompts)} prompts - User: {user_id}"
@@ -88,11 +95,15 @@ Return ONLY the prompt text, no additional formatting or explanations. The promp
         await status_message.edit_text(
             "🎨 Generando imágenes a partir de los prompts..."
         )
+        logging.debug(f"Updated status message to user {user_id} for image generation")
+
         for i, prompt in enumerate(prompts, 1):
             logging.debug(f"Generating image {i}/{len(prompts)} for user {user_id}")
             await ReplicateService.generate_image(
                 prompt, user_id=user_id, message=update.message
             )
+            logging.info(f"Image {i} generation initiated for user {user_id}")
+
         await status_message.edit_text("✅ Generación de fashion prompts completada!")
         logging.info(f"Completed fashion prompt generation for user {user_id}")
     except Exception as e:
