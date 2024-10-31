@@ -5,66 +5,7 @@ from ..services.openai_service import chat_completion
 from ..services.replicate_service import ReplicateService
 from ..utils.database import Database
 
-# Analysis prompt templates
-ANALYSIS_PROMPT = """Return ONLY the descriptive text without any headers, formatting, or meta-text. Do not include phrases like 'Prompt for Image Generation' or any section markers.
-
-Analyze this image and create an extremely detailed generation prompt. Include ALL of the following aspects:
-
-Key elements to include:
-- ALL prompts MUST start with '{trigger_word}'
-
-1. Main Subject:
-- Precise description of the subject(s)
-- Pose, expression, and positioning
-- Clothing and accessories in detail
-- Age range and distinguishing features
-
-2. Composition:
-- Camera angle and perspective
-- Framing and positioning
-- Distance from subject (close-up, medium, full shot)
-- Rule of thirds or other compositional techniques
-
-3. Environment/Setting:
-- Location details
-- Background elements
-- Time of day
-- Weather conditions (if applicable)
-- Architectural or natural elements
-
-4. Lighting:
-- Main light source and direction
-- Shadow characteristics
-- Lighting style (natural, studio, dramatic, etc.)
-- Highlights and contrast details
-
-5. Color Palette:
-- Dominant colors
-- Color relationships
-- Tonal range
-- Color temperature
-
-6. Technical Details:
-- Image style (photorealistic, cinematic, editorial)
-- Lens characteristics (focal length effect)
-- Depth of field
-- Texture and material qualities
-
-7. Mood and Atmosphere:
-- Overall emotional tone
-- Atmospheric effects
-- Environmental mood indicators
-
-Format the response as a single, detailed prompt that captures all these elements in a cohesive, natural way. Focus on visual elements that are crucial for accurate image generation. Write in English and be as specific as possible while maintaining readability."""
-
-SPECIALIST_PROMPT = """Return ONLY the descriptive text without any headers, formatting, or meta-text. Do not include phrases like 'Prompt for Image Generation' or any section markers.
-
-Analyze this image and create an extremely detailed generation prompt. Include ALL of the following aspects:
-
-Use the following format:
-- {trigger_word}, [Main Subject Description], [Setting], [Lighting], [Camera Details], [Artistic Style], [Mood], [Background]
-- Example:
-{trigger_word} wearing a tailored charcoal wool coat over a dark turtleneck, standing with one hand in his pocket, in a quiet city street at dusk with the last remnants of golden hour light reflecting off the wet pavement, captured with a Nikon Z7 II using an 85mm lens at f/1.8, cinematic style with soft shadows and a cool color palette, exuding a confident and contemplative mood, background featuring blurred traffic lights and a row of historic buildings.
+ANALYSIS_PROMPT = """You are a world-class prompt engineer specializing in creating exceptional, highly detailed prompts for AI text-to-image tools like Stable Diffusion, Midjourney, and Leonardo AI. Your expertise lies in crafting prompts that result in photorealistic, hyper-realistic images that are nearly indistinguishable from reality.
 
 Guidelines:
 
@@ -96,12 +37,11 @@ Guidelines:
    - Detail elements that add depth (foreground, middle ground, background).
    - Example: "Background features other patrons quietly engaging in the café."
 
-Requirements:
-- Use precise, descriptive language focused on realism.
-- Avoid subjective interpretations.
-- Length: 350-400 words.
-
-Format the response as a single, detailed prompt that captures all these elements in a cohesive, natural way. Focus on visual elements that are crucial for accurate image generation. Write in English and be as specific as possible while maintaining readability."""
+Important instructions:
+- ALL your prompts must start with /generate {trigger_word}, [Main Subject Description], [Setting], [Lighting], [Camera Details], [Artistic Style], [Mood], [Background]
+- Confident Attitude: Subjects should exude confidence through posture, gaze, masculinity and interaction with their environment.
+- CRITICAL: Detailed Physical Qualities: Highlight an athletic build subtly
+- CRITICAL: The subject's face must be visible but NOT looking directly at the camera. Describe a specific direction or point of focus for the subject's gaze (e.g., "gazing thoughtfully at a distant horizon," "eyes focused on an object in his hands," "looking slightly to the side with a pensive expression")."""
 
 db = Database()
 
@@ -160,11 +100,13 @@ async def analyze_image_handler(update: Update, context: ContextTypes.DEFAULT_TY
             max_tokens=8192,
         )
 
-        if not description:
+        if not description or "I'm sorry" in description:
             logging.error(
-                f"Failed to generate description for image from user {user_id}"
+                f"Failed to generate description for image from user {user_id} - OpenAI declined to assist"
             )
-            await status_message.edit_text("❌ Could not analyze the image.")
+            await status_message.edit_text(
+                "❌ No se pudo analizar la imagen debido a las políticas de contenido."
+            )
             return
 
         # Send the description as a new message
