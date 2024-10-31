@@ -57,8 +57,8 @@ async def analyze_image_handler(update: Update, context: ContextTypes.DEFAULT_TY
         logging.info(f"Requesting OpenAI description - User: {user_id}")
         description = await chat_completion(
             messages=get_image_analysis_messages(trigger_word, image_url),
-            temperature=0.7,
-            max_tokens=500,
+            temperature=1,
+            max_tokens=8192,
         )
 
         # Handle failed description generation
