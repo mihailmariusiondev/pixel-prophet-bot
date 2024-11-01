@@ -57,16 +57,17 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             tasks.append(task)
 
         # Wait for all generations to complete
-        image_urls = await asyncio.gather(*tasks)
-        image_urls = [url for url in image_urls if url]  # Filter out any failed generations
+        results = await asyncio.gather(*tasks)
+        # Filter out failed generations and collect both URLs and params
+        valid_results = [(url, params) for url, params in results if url and params]
 
-        if not image_urls:
+        if not valid_results:
             await update.message.reply_text("❌ No se pudieron generar variaciones.")
             return
 
         # Save predictions and send details to user
         await ReplicateService.save_predictions_for_images(
-            image_urls,
+            valid_results,
             user_id,
             prompt,
             update.message
