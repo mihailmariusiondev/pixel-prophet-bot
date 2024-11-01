@@ -14,7 +14,7 @@ def format_generation_message(prediction_id: str, input_params: str) -> str:
         # Filter parameters we want to show, including prompt and seed
         filtered_params = {
             "seed": params_dict.get("seed", -1),
-            "prompt": params_dict.get("prompt", "No prompt provided"),
+            "prompt": params_dict.get("prompt", "")[:100] + "...",
             "num_inference_steps": params_dict.get("num_inference_steps"),
             "guidance_scale": params_dict.get("guidance_scale"),
             "prompt_strength": params_dict.get("prompt_strength"),
