@@ -29,6 +29,7 @@ class Database:
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
+
                 # User configurations table
                 cursor.execute(
                     """
@@ -183,7 +184,7 @@ class Database:
         Args:
             user_id: Telegram user ID
         Returns:
-            tuple: (prompt, output_url, prediction_id) or None if not found
+            tuple: (id, prompt, output_url) or None if not found
         """
         try:
             logging.info(f"Retrieving last prediction for user {user_id}")
@@ -191,7 +192,7 @@ class Database:
                 cursor = await conn.cursor()
                 await cursor.execute(
                     """
-                    SELECT prompt, output_url, prediction_id
+                    SELECT id, prompt, output_url
                     FROM predictions
                     WHERE user_id = ?
                     ORDER BY created_at DESC
