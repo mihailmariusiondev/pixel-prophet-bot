@@ -76,50 +76,54 @@ class ReplicateService:
 
             # Generate image
             logging.info("Iniciando generación con async_run...")
-            prediction = await replicate.async_run(
+            output = await replicate.async_run(
                 input_params["model_endpoint"],
                 input=input_params,
             )
 
-            logging.info(f"Prediction object: {prediction}")
-            # Captura el ID de la predicción
-            prediction_id = prediction["id"]
-            logging.info(f"ID de la predicción: {prediction_id}")
+            logging.info(f"Output de la generación: {output}")
 
-            # Añadimos log del output completo
-            logging.info("Output completo de replicate:")
-            logging.info(json.dumps(prediction, indent=2))
+            # Obtener la última predicción usando list
+            logging.info("Obteniendo información de la última predicción...")
+            predictions_page = replicate.predictions.list()
+            predictions = list(predictions_page.results)
+            last_prediction = predictions[0]
 
-            if not prediction:
-                if status_message:
-                    await status_message.edit_text(
-                        "❌ Error en la generación de imagen"
-                    )
-                return None, None
+            # Convertir la predicción a un diccionario con los campos que necesitamos
+            prediction_dict = {
+                "id": last_prediction.id,
+                "input": last_prediction.input,
+                "output": last_prediction.output[0],  # Tomamos el primer elemento de la lista
+                "status": last_prediction.status,
+                "created_at": last_prediction.created_at,
+                "completed_at": last_prediction.completed_at,
+            }
 
-            # Llamar a la API para obtener toda la información de la predicción
-            logging.info(
-                f"Obteniendo información completa de la predicción {prediction_id}"
-            )
-            prediction_info = await replicate.predictions.get(prediction_id)
+            logging.info(f"Información completa de la predicción:")
+            logging.info(json.dumps(prediction_dict, indent=2))
 
             # Guardar la información completa de la predicción en la base de datos
             await db.save_prediction(
-                prediction_id=prediction_info["id"],
+                prediction_id=prediction_dict["id"],
                 user_id=user_id,
                 prompt=prompt,
-                input_params=json.dumps(prediction_info["input"]),
-                output_url=prediction_info["output"],
+                input_params=json.dumps(prediction_dict["input"]),
+                output_url=prediction_dict["output"],
             )
 
-            # Clean up status message if exists
+            # Clean up status message
             if status_message:
                 await status_message.delete()
 
-            return (
-                prediction_info["output"],
-                input_params,
-            )  # Return both URL and params used
+            # Send generation details and image
+            if message:
+                await message.reply_text(
+                    format_generation_message(prediction_dict["id"], json.dumps(prediction_dict["input"])),
+                    parse_mode="Markdown"
+                )
+                await message.reply_photo(photo=output[0])
+
+            return output[0], input_params  # Return both URL and params used
 
         except Exception as e:
             logging.error(f"Error generating image: {e}")
