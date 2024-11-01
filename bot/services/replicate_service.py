@@ -88,7 +88,7 @@ class ReplicateService:
 
             if message:
                 await message.reply_text(
-                    format_generation_message(prediction_id, json.dumps(input_params)),
+                    format_generation_message(prompt),
                     parse_mode="Markdown"
                 )
                 await message.reply_photo(photo=output[0])
