@@ -52,7 +52,9 @@ class ReplicateService:
 
             # Get configuration
             if user_id is not None:
-                input_params = await db.get_user_config(user_id, ReplicateService.default_params.copy())
+                input_params = await db.get_user_config(
+                    user_id, ReplicateService.default_params.copy()
+                )
             else:
                 input_params = ReplicateService.default_params.copy()
 
@@ -76,7 +78,9 @@ class ReplicateService:
 
             if not output:
                 if status_message:
-                    await status_message.edit_text("❌ Error en la generación de imagen")
+                    await status_message.edit_text(
+                        "❌ Error en la generación de imagen"
+                    )
                 return None, None
 
             # Clean up status message if exists
@@ -90,53 +94,3 @@ class ReplicateService:
             if status_message:
                 await status_message.edit_text("❌ Error inesperado")
             return None, None
-
-    @staticmethod
-    async def save_predictions_for_images(image_urls_and_params: list, user_id: int, prompt: str, message=None):
-        """
-        Fetches prediction details for a list of generated images and saves them to database.
-        Args:
-            image_urls_and_params: List of tuples (image_url, input_params) from generation
-            user_id: Telegram user ID
-            prompt: Original prompt used for generation
-            message: Optional telegram message for sending results
-        """
-        try:
-            predictions_page = replicate.predictions.list()
-            if predictions_page.results:
-                # Match predictions with our generated images
-                for prediction in predictions_page.results[:len(image_urls_and_params)]:
-                    for image_url, params in image_urls_and_params:
-                        if prediction.output and prediction.output[0] == image_url:
-                            try:
-                                # Save to database
-                                await db.save_prediction(
-                                    prediction_id=prediction.id,
-                                    user_id=user_id,
-                                    prompt=prompt,
-                                    input_params=json.dumps(params),
-                                    output_url=image_url
-                                )
-                                logging.info(f"Saved prediction {prediction.id} for image {image_url}")
-
-                                # Send info and image to user
-                                if message:
-                                    # Send generation details
-                                    await message.reply_text(
-                                        format_generation_message(prediction.id, json.dumps(params)),
-                                        parse_mode="Markdown",
-                                    )
-                                    # Send the actual image
-                                    await message.reply_photo(
-                                        photo=image_url,
-                                        caption="🖼️ Imagen generada"
-                                    )
-                                    logging.info(f"Sent prediction info and image to user {user_id}")
-
-                                # Break inner loop once we find a match
-                                break
-
-                            except Exception as e:
-                                logging.error(f"Error saving/sending prediction: {e}")
-        except Exception as e:
-            logging.error(f"Error fetching/saving predictions: {e}")
