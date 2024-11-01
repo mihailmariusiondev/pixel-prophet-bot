@@ -52,7 +52,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 welcome_text,
                 user_id=user_id,
                 message=update.message,
-                operation_type="start",
+                operation_type="start"
             )
         )
         logging.info(f"Welcome message sent successfully to user {user_id}")

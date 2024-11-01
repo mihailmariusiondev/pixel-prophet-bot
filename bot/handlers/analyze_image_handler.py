@@ -101,7 +101,7 @@ async def analyze_image_handler(update: Update, context: ContextTypes.DEFAULT_TY
             description,
             user_id=user_id,
             message=update.message,
-            operation_type="analysis",
+            operation_type="analysis"
         )
 
         if not image_url or not input_params:
