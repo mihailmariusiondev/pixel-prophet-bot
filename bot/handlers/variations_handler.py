@@ -28,7 +28,7 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     try:
         # Get base configuration
-        params = db.get_user_config(user_id, ReplicateService.default_params.copy())
+        params = await db.get_user_config(user_id, ReplicateService.default_params.copy())
         logging.info(f"Retrieved user config - User: {user_id}")
 
         # Handle specific prediction ID if provided
@@ -38,7 +38,7 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 f"Variation requested for specific prediction: {prediction_id} - User: {user_id}"
             )
 
-            prediction_data = db.get_prediction(prediction_id)
+            prediction_data = await db.get_prediction(prediction_id)
             if not prediction_data:
                 logging.warning(
                     f"Prediction not found: {prediction_id} - User: {user_id}"
@@ -54,7 +54,7 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             )
         else:
             # Use last prediction if no ID provided
-            last_prediction = db.get_last_prediction(user_id)
+            last_prediction = await db.get_last_prediction(user_id)
             if not last_prediction:
                 logging.warning(f"No previous predictions found - User: {user_id}")
                 await update.message.reply_text(

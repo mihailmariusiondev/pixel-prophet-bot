@@ -11,7 +11,7 @@ def require_configured(func):
         update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs
     ):
         user_id = update.effective_user.id
-        config = db.get_user_config(user_id, ReplicateService.default_params.copy())
+        config = await db.get_user_config(user_id, ReplicateService.default_params.copy())
         trigger_word = config.get("trigger_word")
         model_endpoint = config.get("model_endpoint")
         if not trigger_word or not model_endpoint:

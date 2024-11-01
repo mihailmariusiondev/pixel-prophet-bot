@@ -41,7 +41,7 @@ async def analyze_image_handler(update: Update, context: ContextTypes.DEFAULT_TY
         status_message = await update.message.reply_text("⏳ Analizando imagen...")
 
         # Get user configuration
-        config = db.get_user_config(user_id, ReplicateService.default_params.copy())
+        config = await db.get_user_config(user_id, ReplicateService.default_params.copy())
         trigger_word = config.get("trigger_word")
 
         # Get highest resolution image from message

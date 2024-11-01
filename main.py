@@ -1,4 +1,5 @@
 from dotenv import load_dotenv
+import asyncio
 
 # Load environment variables before importing anything else
 load_dotenv()
@@ -7,4 +8,4 @@ load_dotenv()
 from bot.bot import run_bot
 
 if __name__ == "__main__":
-    run_bot()
+    asyncio.run(run_bot())

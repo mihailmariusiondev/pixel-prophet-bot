@@ -51,7 +51,7 @@ async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 operation_type="single"
             )
         )
-        logging.info(f"Image generation completed successfully - User: {user_id}")
+        logging.info(f"Image generation initiated successfully - User: {user_id}")
     except Exception as e:
         logging.error(f"Failed to generate image - User: {user_id}, Error: {str(e)}", exc_info=True)
         await update.message.reply_text("❌ Error al generar la imagen. Por favor, intenta nuevamente.")

@@ -4,6 +4,7 @@ import json
 from ..utils.database import db
 import random
 from ..utils.message_utils import format_generation_message
+import asyncio
 
 
 class ReplicateService:
@@ -64,7 +65,7 @@ class ReplicateService:
 
             # Get user config or default params
             if user_id is not None:
-                input_params = db.get_user_config(
+                input_params = await db.get_user_config(
                     user_id, ReplicateService.default_params.copy()
                 )
                 logging.info(f"Using user-specific configuration for user {user_id}")
@@ -107,12 +108,12 @@ class ReplicateService:
             logging.info(f"Successfully generated image - Operation: {operation_type}")
 
             # Get prediction details
-            predictions_page = replicate.predictions.list()
+            predictions_page = await replicate.predictions.list()
             if predictions_page.results:
                 latest_prediction = predictions_page.results[0]
                 logging.info(f"Retrieved prediction ID: {latest_prediction.id}")
                 # Store prediction data in database
-                db.save_prediction(
+                await db.save_prediction(
                     prediction_id=latest_prediction.id,
                     user_id=user_id,
                     prompt=prompt,

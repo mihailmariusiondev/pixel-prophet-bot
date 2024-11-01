@@ -1,4 +1,4 @@
-import sqlite3
+import aiosqlite
 import json
 from pathlib import Path
 import logging
@@ -8,8 +8,8 @@ import logging
 class Database:
     """
     Handles all database operations for the bot, including user configurations
-    and generation history. Uses SQLite for persistent storage with automatic
-    timestamp tracking for updates.
+    and generation history. Uses aiosqlite for asynchronous persistent storage
+    with automatic timestamp tracking for updates.
     """
 
     _instance = None
@@ -21,17 +21,17 @@ class Database:
             cls._instance.init_database()
         return cls._instance
 
-    def init_database(self):
+    async def init_database(self):
         """
         Initializes the database schema if it doesn't exist.
         Creates tables with appropriate constraints and defaults.
         """
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.cursor()
                 # User configurations table with automatic timestamp updates
                 # Stores JSON-serialized config data for flexibility
-                cursor.execute(
+                await cursor.execute(
                     """
                     CREATE TABLE IF NOT EXISTS user_configs (
                         user_id INTEGER PRIMARY KEY,
@@ -42,7 +42,7 @@ class Database:
                 )
 
                 # New table for storing predictions with detailed tracking
-                cursor.execute(
+                await cursor.execute(
                     """
                     CREATE TABLE IF NOT EXISTS predictions (
                         prediction_id TEXT PRIMARY KEY,
@@ -55,16 +55,17 @@ class Database:
                     )
                 """
                 )
-                conn.commit()
+                await conn.commit()
+                logging.info("Database initialized successfully")
 
         except Exception as e:
             logging.error(f"Error initializing database: {e}")
             raise
 
-    def get_user_config(self, user_id, default_config):
+    async def get_user_config(self, user_id, default_config):
         """
         Retrieves user-specific configuration or falls back to defaults.
-        Uses context manager for automatic connection handling.
+        Uses asynchronous context manager for automatic connection handling.
 
         Args:
             user_id: Telegram user ID
@@ -75,12 +76,12 @@ class Database:
         """
         try:
             logging.info(f"Retrieving config for user {user_id}")
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute(
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.cursor()
+                await cursor.execute(
                     "SELECT config FROM user_configs WHERE user_id = ?", (user_id,)
                 )
-                result = cursor.fetchone()
+                result = await cursor.fetchone()
 
                 if result:
                     logging.info(f"Found existing config for user {user_id}")
@@ -93,7 +94,7 @@ class Database:
             logging.error(f"Error retrieving user config: {e}", exc_info=True)
             return default_config
 
-    def set_user_config(self, user_id, config):
+    async def set_user_config(self, user_id, config):
         """
         Updates or creates user configuration using UPSERT pattern.
         Automatically handles JSON serialization of config data.
@@ -105,24 +106,26 @@ class Database:
         try:
             logging.info(f"Updating config for user {user_id}")
             logging.info(f"New config: {config}")
-
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute(
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.cursor()
+                await cursor.execute(
                     """
-                    INSERT OR REPLACE INTO user_configs (user_id, config)
+                    INSERT INTO user_configs (user_id, config)
                     VALUES (?, ?)
-                """,
+                    ON CONFLICT(user_id) DO UPDATE SET
+                        config=excluded.config,
+                        updated_at=CURRENT_TIMESTAMP
+                    """,
                     (user_id, json.dumps(config)),
                 )
-                conn.commit()
+                await conn.commit()
                 logging.info(f"Successfully updated config for user {user_id}")
 
         except Exception as e:
             logging.error(f"Error setting user config: {e}", exc_info=True)
             raise
 
-    def save_prediction(self, prediction_id, user_id, prompt, input_params, output_url):
+    async def save_prediction(self, prediction_id, user_id, prompt, input_params, output_url):
         """
         Save prediction data for future reference
         Args:
@@ -134,17 +137,17 @@ class Database:
         """
         try:
             logging.info(f"Saving prediction data for ID: {prediction_id}")
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute(
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.cursor()
+                await cursor.execute(
                     """
                     INSERT INTO predictions
                     (prediction_id, user_id, prompt, input_params, output_url)
                     VALUES (?, ?, ?, ?, ?)
-                """,
+                    """,
                     (prediction_id, user_id, prompt, input_params, output_url),
                 )
-                conn.commit()
+                await conn.commit()
                 logging.info(
                     f"Successfully saved prediction {prediction_id} for user {user_id}"
                 )
@@ -152,7 +155,7 @@ class Database:
             logging.error(f"Error saving prediction: {e}", exc_info=True)
             raise
 
-    def get_prediction(self, prediction_id):
+    async def get_prediction(self, prediction_id):
         """
         Retrieve prediction data by ID
         Args:
@@ -162,17 +165,17 @@ class Database:
         """
         try:
             logging.info(f"Retrieving prediction data for ID: {prediction_id}")
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute(
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.cursor()
+                await cursor.execute(
                     """
                     SELECT prompt, input_params, output_url
                     FROM predictions
                     WHERE prediction_id = ?
-                """,
+                    """,
                     (prediction_id,),
                 )
-                result = cursor.fetchone()
+                result = await cursor.fetchone()
                 if result:
                     logging.info(f"Found prediction data for ID: {prediction_id}")
                 else:
@@ -182,7 +185,7 @@ class Database:
             logging.error(f"Error retrieving prediction: {e}", exc_info=True)
             return None
 
-    def get_last_prediction(self, user_id):
+    async def get_last_prediction(self, user_id):
         """
         Get the most recent prediction for a specific user
         Args:
@@ -192,9 +195,9 @@ class Database:
         """
         try:
             logging.info(f"Retrieving last prediction for user {user_id}")
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute(
+            async with aiosqlite.connect(self.db_path) as conn:
+                cursor = await conn.cursor()
+                await cursor.execute(
                     """
                     SELECT prompt, input_params, output_url, prediction_id
                     FROM predictions
@@ -204,7 +207,7 @@ class Database:
                     """,
                     (user_id,),
                 )
-                return cursor.fetchone()
+                return await cursor.fetchone()
         except Exception as e:
             logging.error(f"Error retrieving last prediction: {e}", exc_info=True)
             return None

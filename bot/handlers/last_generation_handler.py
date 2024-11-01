@@ -29,7 +29,7 @@ async def last_generation_handler(update: Update, context: ContextTypes.DEFAULT_
     try:
         # Get last prediction from database
         logging.info(f"Retrieving last prediction for user {user_id}")
-        last_prediction = db.get_last_prediction(user_id)
+        last_prediction = await db.get_last_prediction(user_id)
 
         if not last_prediction:
             logging.warning(f"No previous predictions found for user {user_id}")

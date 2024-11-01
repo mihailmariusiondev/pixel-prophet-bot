@@ -33,6 +33,7 @@ def run_bot():
         .read_timeout(30)  # Set read timeout for the bot
         .write_timeout(30)  # Set write timeout for the bot
         .connect_timeout(30)  # Set connection timeout for the bot
+        .concurrent_updates(True)  # Enable concurrent updates
         .build()
     )
     logging.info("Application built successfully")
