@@ -2,6 +2,7 @@ import aiosqlite
 import json
 from pathlib import Path
 import logging
+import sqlite3
 
 
 # Create a singleton instance
@@ -21,17 +22,17 @@ class Database:
             cls._instance.init_database()
         return cls._instance
 
-    async def init_database(self):
+    def init_database(self):
         """
         Initializes the database schema if it doesn't exist.
         Creates tables with appropriate constraints and defaults.
         """
         try:
-            async with aiosqlite.connect(self.db_path) as conn:
-                cursor = await conn.cursor()
-                # User configurations table with automatic timestamp updates
-                # Stores JSON-serialized config data for flexibility
-                await cursor.execute(
+            # Use synchronous sqlite3 for initialization
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                # User configurations table
+                cursor.execute(
                     """
                     CREATE TABLE IF NOT EXISTS user_configs (
                         user_id INTEGER PRIMARY KEY,
@@ -40,9 +41,8 @@ class Database:
                     )
                 """
                 )
-
-                # New table for storing predictions with detailed tracking
-                await cursor.execute(
+                # Predictions table
+                cursor.execute(
                     """
                     CREATE TABLE IF NOT EXISTS predictions (
                         prediction_id TEXT PRIMARY KEY,
@@ -55,9 +55,7 @@ class Database:
                     )
                 """
                 )
-                await conn.commit()
-                logging.info("Database initialized successfully")
-
+                conn.commit()
         except Exception as e:
             logging.error(f"Error initializing database: {e}")
             raise
@@ -125,7 +123,9 @@ class Database:
             logging.error(f"Error setting user config: {e}", exc_info=True)
             raise
 
-    async def save_prediction(self, prediction_id, user_id, prompt, input_params, output_url):
+    async def save_prediction(
+        self, prediction_id, user_id, prompt, input_params, output_url
+    ):
         """
         Save prediction data for future reference
         Args:
