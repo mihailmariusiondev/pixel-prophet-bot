@@ -70,11 +70,20 @@ class ReplicateService:
             input_params["seed"] = random.randint(1, 1000000)
             input_params["prompt"] = prompt
 
+            # Añadimos logs antes de la generación
+            logging.info("Parámetros de entrada:")
+            logging.info(json.dumps(input_params, indent=2))
+
             # Generate image
+            logging.info("Iniciando generación con async_run...")
             output = await replicate.async_run(
                 input_params["model_endpoint"],
                 input=input_params,
             )
+
+            # Añadimos log del output completo
+            logging.info("Output completo de replicate:")
+            logging.info(json.dumps(output, indent=2))
 
             if not output:
                 if status_message:
