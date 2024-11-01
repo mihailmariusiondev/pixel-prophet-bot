@@ -1,10 +1,8 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 import logging
-from ..utils.database import Database
+from ..utils.database import db
 from ..utils.message_utils import format_generation_message
-
-db = Database()
 
 
 async def last_generation_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):

@@ -3,7 +3,7 @@ from telegram.ext import ContextTypes
 import logging
 from ..services.openai_service import chat_completion
 from ..services.replicate_service import ReplicateService
-from ..utils.database import Database
+from ..utils.database import db
 import aiohttp
 import io
 import base64
@@ -15,8 +15,6 @@ Your responses must always contain the trigger word {trigger_word}. When describ
 You will generate responses structured to start with a general overview of the image, then break into detailed analysis of the main subject, environment, lighting, colors, textures, and any notable elements, finally concluding with the mood or atmosphere. All responses will focus on observable elements, and avoid subjective interpretations, maintaining a focus on realism and accuracy. Your goal is to help users vividly imagine the visual content, and your language will be clear, descriptive, and authoritative. Your responses will be logically ordered, easy to follow, and consistently detailed, highlighting aspects like reflections, textures, and intricate patterns that contribute to a photorealistic portrayal. You will always act as an expert in this domain, ensuring each image is described with professional-level depth and detail. You may describe possible camera angles, lighting, and depth of field when relevant.
 
 Provide your description without any formatting, metadata, or extra text."""
-
-db = Database()
 
 
 async def analyze_image_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):

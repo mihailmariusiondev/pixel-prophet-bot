@@ -5,9 +5,7 @@ from telegram.ext import ContextTypes
 from ..services.replicate_service import ReplicateService
 import logging
 from ..utils.decorators import require_configured
-from ..utils.database import Database
-
-db = Database()
+from ..utils.database import db
 
 @require_configured
 async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):

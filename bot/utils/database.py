@@ -3,18 +3,21 @@ import json
 from pathlib import Path
 import logging
 
-
+# Create a singleton instance
 class Database:
     """
     Handles all database operations for the bot, including user configurations
     and generation history. Uses SQLite for persistent storage with automatic
     timestamp tracking for updates.
     """
+    _instance = None
 
-    def __init__(self):
-        # Store database path as a Path object for cross-platform compatibility
-        self.db_path = Path("bot_data.db")
-        self.init_database()
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(Database, cls).__new__(cls)
+            cls._instance.db_path = Path("bot_data.db")
+            cls._instance.init_database()
+        return cls._instance
 
     def init_database(self):
         """
@@ -234,3 +237,9 @@ class Database:
         except Exception as e:
             logging.error(f"Error retrieving last prediction: {e}", exc_info=True)
             return None
+
+# Create the singleton instance
+db = Database()
+
+# Export the singleton instance
+__all__ = ['db']

@@ -1,11 +1,9 @@
 import replicate
 import logging
 import json
-from ..utils.database import Database
+from ..utils.database import db
 import random
 from ..utils.message_utils import format_generation_message
-
-db = Database()
 
 
 class ReplicateService:

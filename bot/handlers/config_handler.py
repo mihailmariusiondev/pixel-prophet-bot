@@ -3,9 +3,7 @@ from telegram.ext import ContextTypes
 from ..services.replicate_service import ReplicateService
 import json
 import logging
-from ..utils import Database
-
-db = Database()
+from ..utils.database import db
 
 # Define the allowed parameters and their order
 ALLOWED_PARAMS = {

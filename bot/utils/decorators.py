@@ -2,9 +2,7 @@ from functools import wraps
 from telegram import Update
 from telegram.ext import ContextTypes
 from ..services.replicate_service import ReplicateService
-from ..utils.database import Database
-
-db = Database()
+from ..utils.database import db
 
 
 def require_configured(func):
