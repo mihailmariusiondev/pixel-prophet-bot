@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import logging
 
+
 # Create a singleton instance
 class Database:
     """
@@ -10,6 +11,7 @@ class Database:
     and generation history. Uses SQLite for persistent storage with automatic
     timestamp tracking for updates.
     """
+
     _instance = None
 
     def __new__(cls):
@@ -120,37 +122,6 @@ class Database:
             logging.error(f"Error setting user config: {e}", exc_info=True)
             raise
 
-    def get_last_generation(self, user_id):
-        """Get user's last generation parameters"""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    "SELECT params FROM last_generations WHERE user_id = ?", (user_id,)
-                )
-                result = cursor.fetchone()
-                return json.loads(result[0]) if result else None
-        except Exception as e:
-            logging.error(f"Error getting last generation: {e}")
-            return None
-
-    def set_last_generation(self, user_id, params):
-        """Save or update user's last generation parameters"""
-        try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute(
-                    """
-                    INSERT OR REPLACE INTO last_generations (user_id, params)
-                    VALUES (?, ?)
-                """,
-                    (user_id, json.dumps(params)),
-                )
-                conn.commit()
-        except Exception as e:
-            logging.error(f"Error setting last generation: {e}")
-            raise
-
     def save_prediction(self, prediction_id, user_id, prompt, input_params, output_url):
         """
         Save prediction data for future reference
@@ -238,8 +209,9 @@ class Database:
             logging.error(f"Error retrieving last prediction: {e}", exc_info=True)
             return None
 
+
 # Create the singleton instance
 db = Database()
 
 # Export the singleton instance
-__all__ = ['db']
+__all__ = ["db"]
