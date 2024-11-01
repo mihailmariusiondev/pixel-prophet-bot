@@ -30,9 +30,6 @@ async def chat_completion(messages, model="gpt-4o", temperature=0.7, max_tokens=
         f"Starting chat completion request - Model: {model}, Temperature: {temperature}, "
         f"Max Tokens: {max_tokens if max_tokens else 'None'}"
     )
-    logging.info(
-        f"Request messages: {messages}"
-    )  # Debug level to avoid logging sensitive data in production
 
     try:
         # Make the API call to OpenAI

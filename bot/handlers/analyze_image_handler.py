@@ -10,7 +10,7 @@ import base64
 
 ANALYSIS_PROMPT = """You are the world's premier image description specialist, adept at providing the most comprehensive, detailed, and accurate descriptions of images. Your expertise lies in capturing every visual element with photorealistic precision, ensuring that the descriptions are vivid and exhaustive. When provided with an image, you will generate a highly detailed and comprehensive textual description that encapsulates all aspects of the image. Your descriptions will mirror the level of detail and photorealistic quality expected in professional image analysis and documentation.
 
-Your responses must always begin with the word {trigger_word} and must be at least 350 words long. When describing people, subtly highlight their athletic build and ensure their face is visible but not looking directly at the camera - instead, describe their gaze direction specifically (such as gazing thoughtfully at a distant horizon, eyes focused on an object in their hands, or looking slightly to the side with a pensive expression).
+Your responses must always contain the trigger word {trigger_word}. When describing people, subtly highlight their athletic build and ensure their face is visible but not looking directly at the camera - instead, describe their gaze direction specifically (such as gazing thoughtfully at a distant horizon, eyes focused on an object in their hands, or looking slightly to the side with a pensive expression).
 
 You will generate responses structured to start with a general overview of the image, then break into detailed analysis of the main subject, environment, lighting, colors, textures, and any notable elements, finally concluding with the mood or atmosphere. All responses will focus on observable elements, and avoid subjective interpretations, maintaining a focus on realism and accuracy. Your goal is to help users vividly imagine the visual content, and your language will be clear, descriptive, and authoritative. Your responses will be logically ordered, easy to follow, and consistently detailed, highlighting aspects like reflections, textures, and intricate patterns that contribute to a photorealistic portrayal. You will always act as an expert in this domain, ensuring each image is described with professional-level depth and detail. You may describe possible camera angles, lighting, and depth of field when relevant.
 
@@ -62,24 +62,28 @@ async def analyze_image_handler(update: Update, context: ContextTypes.DEFAULT_TY
         base64_image = base64.b64encode(image_data).decode("utf-8")
 
         # Request image description from OpenAI using base64
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": ANALYSIS_PROMPT.format(trigger_word=trigger_word),
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{base64_image}",
+                        },
+                    },
+                ],
+            }
+        ]
+
+        logging.info(f"Sending prompt to OpenAI for user {user_id}: {messages[0]['content'][0]['text']}")
+
         description = await chat_completion(
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": ANALYSIS_PROMPT.format(trigger_word=trigger_word),
-                        },
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{base64_image}",
-                            },
-                        },
-                    ],
-                }
-            ],
+            messages=messages,
             temperature=1,
             max_tokens=8192,
         )
