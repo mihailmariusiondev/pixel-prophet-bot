@@ -125,22 +125,17 @@ class Database:
 
     async def save_prediction(self, user_id, prompt, output_url):
         """
-        Save prediction data with unique prediction_id
+        Save prediction data with unique prediction_id using full UUID
         """
         try:
-            prediction_id = str(uuid.uuid4())[
-                :8
-            ]  # Usando solo los primeros 8 caracteres para IDs más cortos
+            prediction_id = str(uuid.uuid4())  # UUID completo, ej: 550e8400-e29b-41d4-a716-446655440000
             async with aiosqlite.connect(self.db_path) as conn:
                 cursor = await conn.cursor()
-                await cursor.execute(
-                    """
+                await cursor.execute("""
                     INSERT INTO predictions
                     (prediction_id, user_id, prompt, output_url)
                     VALUES (?, ?, ?, ?)
-                    """,
-                    (prediction_id, user_id, prompt, output_url),
-                )
+                    """, (prediction_id, user_id, prompt, output_url))
                 await conn.commit()
                 return prediction_id
         except Exception as e:
