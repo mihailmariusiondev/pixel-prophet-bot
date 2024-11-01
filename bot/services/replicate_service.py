@@ -76,27 +76,50 @@ class ReplicateService:
 
             # Generate image
             logging.info("Iniciando generación con async_run...")
-            output = await replicate.async_run(
+            prediction = await replicate.async_run(
                 input_params["model_endpoint"],
                 input=input_params,
             )
 
+            logging.info(f"Prediction object: {prediction}")
+            # Captura el ID de la predicción
+            prediction_id = prediction["id"]
+            logging.info(f"ID de la predicción: {prediction_id}")
+
             # Añadimos log del output completo
             logging.info("Output completo de replicate:")
-            logging.info(json.dumps(output, indent=2))
+            logging.info(json.dumps(prediction, indent=2))
 
-            if not output:
+            if not prediction:
                 if status_message:
                     await status_message.edit_text(
                         "❌ Error en la generación de imagen"
                     )
                 return None, None
 
+            # Llamar a la API para obtener toda la información de la predicción
+            logging.info(
+                f"Obteniendo información completa de la predicción {prediction_id}"
+            )
+            prediction_info = await replicate.predictions.get(prediction_id)
+
+            # Guardar la información completa de la predicción en la base de datos
+            await db.save_prediction(
+                prediction_id=prediction_info["id"],
+                user_id=user_id,
+                prompt=prompt,
+                input_params=json.dumps(prediction_info["input"]),
+                output_url=prediction_info["output"],
+            )
+
             # Clean up status message if exists
             if status_message:
                 await status_message.delete()
 
-            return output[0], input_params  # Return both URL and params used
+            return (
+                prediction_info["output"],
+                input_params,
+            )  # Return both URL and params used
 
         except Exception as e:
             logging.error(f"Error generating image: {e}")
