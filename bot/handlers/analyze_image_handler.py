@@ -98,7 +98,10 @@ async def analyze_image_handler(update: Update, context: ContextTypes.DEFAULT_TY
 
         # Generate new image
         image_url, input_params = await ReplicateService.generate_image(
-            description, user_id=user_id, operation_type="analysis"
+            description,
+            user_id=user_id,
+            message=update.message,
+            operation_type="analysis",
         )
 
         if not image_url or not input_params:

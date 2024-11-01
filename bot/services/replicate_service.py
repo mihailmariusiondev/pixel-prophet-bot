@@ -51,12 +51,18 @@ class ReplicateService:
                 status_message = await message.reply_text(status_text)
 
             # Get configuration - simplified
-            input_params = await db.get_user_config(
-                user_id, ReplicateService.default_params.copy()
-            ) if user_id is not None else ReplicateService.default_params.copy()
+            input_params = (
+                await db.get_user_config(
+                    user_id, ReplicateService.default_params.copy()
+                )
+                if user_id is not None
+                else ReplicateService.default_params.copy()
+            )
 
             # Validate config
-            if not input_params.get("trigger_word") or not input_params.get("model_endpoint"):
+            if not input_params.get("trigger_word") or not input_params.get(
+                "model_endpoint"
+            ):
                 if status_message:
                     await status_message.edit_text("❌ Configuración incompleta.")
                 return None, None
@@ -76,10 +82,8 @@ class ReplicateService:
                 raise Exception("No se generó ninguna imagen")
 
             # Save prediction with auto-generated ID
-            prediction_id = await db.save_prediction(
-                user_id=user_id,
-                prompt=prompt,
-                output_url=output[0]
+            await db.save_prediction(
+                user_id=user_id, prompt=prompt, output_url=output[0]
             )
 
             # Clean up status message and send results
@@ -87,11 +91,7 @@ class ReplicateService:
                 await status_message.delete()
 
             if message:
-                await message.reply_text(
-                    format_generation_message(prompt),
-                    parse_mode="Markdown"
-                )
-                await message.reply_photo(photo=output[0])
+                await format_generation_message(prompt, message, output[0])
 
             return output[0], input_params
 

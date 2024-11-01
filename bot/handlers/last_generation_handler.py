@@ -21,10 +21,7 @@ async def last_generation_handler(update: Update, context: ContextTypes.DEFAULT_
         prompt = last_prediction[1]  # prompt column
         image_url = last_prediction[2]  # output_url column
 
-        await update.message.reply_text(
-            format_generation_message(prompt), parse_mode="Markdown"
-        )
-        await update.message.reply_photo(photo=image_url)
+        await format_generation_message(prompt, update.message, image_url)
 
     except Exception as e:
         logging.error(f"Error retrieving last generation for user {user_id}: {e}")
