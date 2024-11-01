@@ -8,14 +8,16 @@ async def format_generation_message(prompt: str, message=None, image_url=None, p
     try:
         base_text = "📝 Prompt: `"
         id_text = f"\n🔍 ID: `{prediction_id}`" if prediction_id else ""
-        max_prompt_length = 4096 - len(base_text) - len(id_text) - 1  # -1 for the closing backtick
+        hint_text = f"\n💡 Usa `/variations {prediction_id}` para generar variaciones" if prediction_id else ""
+
+        max_prompt_length = 4096 - len(base_text) - len(id_text) - len(hint_text) - 1  # -1 for the closing backtick
 
         if len(prompt) > max_prompt_length:
             formatted_prompt = prompt[:max_prompt_length-3] + "...`"
         else:
             formatted_prompt = prompt + "`"
 
-        formatted_text = base_text + formatted_prompt + id_text
+        formatted_text = base_text + formatted_prompt + id_text + hint_text
 
         # If message and image_url are provided, send to chat
         if message and image_url:
