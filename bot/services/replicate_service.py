@@ -109,6 +109,7 @@ class ReplicateService:
                     for image_url, params in image_urls_and_params:
                         if prediction.output and prediction.output[0] == image_url:
                             try:
+                                # Save to database
                                 await db.save_prediction(
                                     prediction_id=prediction.id,
                                     user_id=user_id,
@@ -116,8 +117,11 @@ class ReplicateService:
                                     input_params=json.dumps(params),
                                     output_url=image_url
                                 )
-                                # Send complete info to user if message provided
+                                logging.info(f"Saved prediction {prediction.id} for image {image_url}")
+
+                                # Send info and image to user
                                 if message:
+                                    # Send generation details
                                     await message.reply_text(
                                         format_generation_message(prediction.id, json.dumps(params)),
                                         parse_mode="Markdown",
@@ -127,8 +131,12 @@ class ReplicateService:
                                         photo=image_url,
                                         caption="🖼️ Imagen generada"
                                     )
-                                logging.info(f"Saved prediction {prediction.id} for image {image_url}")
+                                    logging.info(f"Sent prediction info and image to user {user_id}")
+
+                                # Break inner loop once we find a match
+                                break
+
                             except Exception as e:
-                                logging.error(f"Error saving prediction: {e}")
+                                logging.error(f"Error saving/sending prediction: {e}")
         except Exception as e:
             logging.error(f"Error fetching/saving predictions: {e}")

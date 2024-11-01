@@ -7,7 +7,8 @@ from ..utils.database import db
 # This ensures secure handling of credentials
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-async def chat_completion(messages, model="gpt-4o", temperature=0.7, max_tokens=None):
+
+def chat_completion(messages, model="gpt-4o", temperature=0.7, max_tokens=None):
     """
     Generic function to make a chat completion request to the OpenAI API.
     Supports both text and vision tasks through message formatting.
@@ -32,7 +33,7 @@ async def chat_completion(messages, model="gpt-4o", temperature=0.7, max_tokens=
         # Make the API call to OpenAI
         # The create() method handles the actual HTTP request to the OpenAI API
         logging.info("Sending request to OpenAI API")
-        response = await client.chat.completions.create(
+        response = client.chat.completions.create(
             model=model,
             messages=messages,
             temperature=temperature,
