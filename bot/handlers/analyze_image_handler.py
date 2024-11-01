@@ -105,11 +105,6 @@ async def analyze_image_handler(update: Update, context: ContextTypes.DEFAULT_TY
             await status_message.edit_text("❌ Error generando la imagen.")
             return
 
-        # Save prediction and send results
-        await ReplicateService.save_predictions_for_images(
-            [(image_url, input_params)], user_id, description, update.message
-        )
-
         # Clean up status message
         await status_message.delete()
 
