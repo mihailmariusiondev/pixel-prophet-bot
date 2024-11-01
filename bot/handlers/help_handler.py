@@ -32,7 +32,6 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "main_commands": (
                 "*Comandos principales:*\n"
                 "`/generate` \\- Genera una imagen a partir de tu descripción\n"
-                "`/fashion` \\- Genera 3 imágenes de moda masculina\n"
                 "`/variations` \\- Genera 3 variaciones de una imagen\n"
                 "`/last_generation` \\- Muestra tu última generación\n"
             ),
@@ -62,7 +61,6 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "• Puedes copiar el ID de cualquier generación para usar con variations\n"
                 "• Si usas variations sin ID, se usará tu última generación\n"
                 "• Usa config para personalizar los parámetros de generación\n"
-                "• El comando fashion genera 3 imágenes de moda masculina automáticamente"
             ),
         }
         logging.info(f"Help sections prepared for user {user_id}")

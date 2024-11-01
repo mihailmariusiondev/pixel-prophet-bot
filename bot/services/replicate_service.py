@@ -42,7 +42,7 @@ class ReplicateService:
             prompt: Text description for image generation
             user_id: Optional Telegram user ID for config lookup
             message: Optional telegram message object for user communication
-            operation_type: Type of operation ("single", "variation", "fashion", "analysis")
+            operation_type: Type of operation ("single", "variation", "analysis")
 
         Returns:
             tuple: (image_url, prediction_id, parameters_json) or None on failure
@@ -52,7 +52,6 @@ class ReplicateService:
             status_messages = {
                 "single": "⏳ Generando imagen...",
                 "variation": "⏳ Generando variación...",
-                "fashion": "⏳ Generando imagen de moda...",
                 "analysis": "⏳ Generando imagen basada en análisis...",
             }
 
