@@ -4,6 +4,7 @@ from ..services.replicate_service import ReplicateService
 from ..utils.database import db
 import logging
 from ..utils.decorators import require_configured
+import asyncio
 
 
 @require_configured
@@ -68,11 +69,13 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         for i in range(3):
             logging.info(f"Generating variation {i+1}/3 - User: {user_id}")
             try:
-                await ReplicateService.generate_image(
-                    prompt,
-                    user_id=user_id,
-                    message=update.message,
-                    operation_type="variation",
+                asyncio.create_task(
+                    ReplicateService.generate_image(
+                        prompt,
+                        user_id=user_id,
+                        message=update.message,
+                        operation_type="variation",
+                    )
                 )
                 logging.info(
                     f"Successfully generated variation {i+1} - User: {user_id}"

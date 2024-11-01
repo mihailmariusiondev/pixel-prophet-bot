@@ -3,6 +3,8 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 import logging
+import asyncio
+from ..services.replicate_service import ReplicateService
 
 
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -45,7 +47,14 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         logging.info(f"Sending welcome message to user {user_id}")
-        await update.message.reply_text(welcome_text, parse_mode="Markdown")
+        asyncio.create_task(
+            ReplicateService.generate_image(
+                welcome_text,
+                user_id=user_id,
+                message=update.message,
+                operation_type="start",
+            )
+        )
         logging.info(f"Welcome message sent successfully to user {user_id}")
 
     except Exception as e:

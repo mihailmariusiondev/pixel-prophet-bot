@@ -11,3 +11,4 @@ dependencies:
       - openai
       - replicate
       - pydantic==1.9.0
+      - aiosqlite

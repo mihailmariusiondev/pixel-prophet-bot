@@ -5,8 +5,8 @@ from ..services.openai_service import chat_completion
 from ..services.replicate_service import ReplicateService
 from ..utils.database import db
 import aiohttp
-import io
 import base64
+import asyncio
 
 ANALYSIS_PROMPT = """You are the world's premier image description specialist, adept at providing the most comprehensive, detailed, and accurate descriptions of images. Your expertise lies in capturing every visual element with photorealistic precision, ensuring that the descriptions are vivid and exhaustive. When provided with an image, you will generate a highly detailed and comprehensive textual description that encapsulates all aspects of the image. Your descriptions will mirror the level of detail and photorealistic quality expected in professional image analysis and documentation.
 
@@ -78,7 +78,9 @@ async def analyze_image_handler(update: Update, context: ContextTypes.DEFAULT_TY
             }
         ]
 
-        logging.info(f"Sending prompt to OpenAI for user {user_id}: {messages[0]['content'][0]['text']}")
+        logging.info(
+            f"Sending prompt to OpenAI for user {user_id}: {messages[0]['content'][0]['text']}"
+        )
 
         description = await chat_completion(
             messages=messages,
@@ -107,8 +109,10 @@ async def analyze_image_handler(update: Update, context: ContextTypes.DEFAULT_TY
         logging.info(f"Generated description for user {user_id}: {description}...")
 
         # Generate new image and send results
-        await ReplicateService.generate_image(
-            description, user_id=user_id, message=update.message
+        asyncio.create_task(
+            ReplicateService.generate_image(
+                description, user_id=user_id, message=update.message
+            )
         )
         logging.info(f"Image generation initiated for user {user_id}")
     except Exception as e:

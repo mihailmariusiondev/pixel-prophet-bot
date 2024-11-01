@@ -6,6 +6,7 @@ from ..services.replicate_service import ReplicateService
 import logging
 from ..utils.decorators import require_configured
 from ..utils.database import db
+import asyncio
 
 @require_configured
 async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -42,11 +43,13 @@ async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     logging.info(f"Starting image generation - User: {user_id}, Prompt: {prompt[:100]}...")
     try:
-        await ReplicateService.generate_image(
-            prompt,
-            user_id=user_id,
-            message=update.message,
-            operation_type="single"
+        asyncio.create_task(
+            ReplicateService.generate_image(
+                prompt,
+                user_id=user_id,
+                message=update.message,
+                operation_type="single"
+            )
         )
         logging.info(f"Image generation completed successfully - User: {user_id}")
     except Exception as e:
