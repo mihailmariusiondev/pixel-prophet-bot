@@ -5,6 +5,7 @@ from ..utils.database import db
 import logging
 from ..utils.decorators import require_configured
 import asyncio
+import json
 
 
 @require_configured
@@ -27,68 +28,50 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     logging.info(f"Variations requested - User: {user_id} ({username})")
 
     try:
-        # Get base configuration
-        params = await db.get_user_config(user_id, ReplicateService.default_params.copy())
-        logging.info(f"Retrieved user config - User: {user_id}")
-
-        # Handle specific prediction ID if provided
+        # Get prompt from previous generation or args
         if context.args:
             prediction_id = context.args[0]
-            logging.info(
-                f"Variation requested for specific prediction: {prediction_id} - User: {user_id}"
-            )
-
             prediction_data = await db.get_prediction(prediction_id)
             if not prediction_data:
-                logging.warning(
-                    f"Prediction not found: {prediction_id} - User: {user_id}"
-                )
-                await update.message.reply_text(
-                    "❌ No se encontraron datos para esta predicción.\n"
-                    "Por favor, usa una generación más reciente o crea una nueva."
-                )
+                await update.message.reply_text("❌ No se encontraron datos para esta predicción.")
                 return
-            prompt, input_params, _ = prediction_data
-            logging.info(
-                f"Retrieved prediction data successfully - User: {user_id}, ID: {prediction_id}"
-            )
+            prompt = prediction_data[0]
         else:
-            # Use last prediction if no ID provided
             last_prediction = await db.get_last_prediction(user_id)
             if not last_prediction:
-                logging.warning(f"No previous predictions found - User: {user_id}")
-                await update.message.reply_text(
-                    "❌ No hay una generación previa. Usa /generate primero o "
-                    "proporciona un ID de predicción: /variations <prediction_id>"
-                )
+                await update.message.reply_text("❌ No hay una generación previa.")
                 return
             prompt = last_prediction[0]
-            logging.info(f"Using last prediction for variations - User: {user_id}")
 
-        # Generate variations
-        for i in range(3):
-            logging.info(f"Generating variation {i+1}/3 - User: {user_id}")
-            try:
-                asyncio.create_task(
-                    ReplicateService.generate_image(
-                        prompt,
-                        user_id=user_id,
-                        message=update.message,
-                        operation_type="variation",
-                    )
+        # Generate variations concurrently
+        tasks = []
+        for _ in range(3):
+            task = asyncio.create_task(
+                ReplicateService.generate_image(
+                    prompt,
+                    user_id=user_id,
+                    message=update.message,
+                    operation_type="variation",
                 )
-                logging.info(
-                    f"Successfully generated variation {i+1} - User: {user_id}"
-                )
-            except Exception as e:
-                logging.error(
-                    f"Failed to generate variation {i+1} - User: {user_id}, Error: {str(e)}"
-                )
-                # Continue with next variation even if one fails
-                continue
+            )
+            tasks.append(task)
+
+        # Wait for all generations to complete
+        image_urls = await asyncio.gather(*tasks)
+        image_urls = [url for url in image_urls if url]  # Filter out any failed generations
+
+        if not image_urls:
+            await update.message.reply_text("❌ No se pudieron generar variaciones.")
+            return
+
+        # Save predictions and send details to user
+        await ReplicateService.save_predictions_for_images(
+            image_urls,
+            user_id,
+            prompt,
+            update.message
+        )
 
     except Exception as e:
-        logging.error(f"Error in variations_handler - User: {user_id}", exc_info=True)
-        await update.message.reply_text(
-            "❌ Ocurrió un error al generar las variaciones."
-        )
+        logging.error(f"Error in variations_handler: {e}")
+        await update.message.reply_text("❌ Ocurrió un error al generar las variaciones.")

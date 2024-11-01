@@ -35,137 +35,96 @@ class ReplicateService:
         prompt, user_id=None, message=None, operation_type="single"
     ):
         """
-        Generates an image using the Replicate API and handles all user communication.
-
-        Args:
-            prompt: Text description for image generation
-            user_id: Optional Telegram user ID for config lookup
-            message: Optional telegram message object for user communication
-            operation_type: Type of operation ("single", "variation", "analysis")
-
+        Generates an image using the Replicate API.
         Returns:
-            tuple: (image_url, prediction_id, parameters_json) or None on failure
+            str: Generated image URL or None on failure
         """
         try:
-            # Initialize status message based on operation type
-            status_messages = {
-                "single": "⏳ Generando imagen...",
-                "variation": "⏳ Generando variación...",
-                "analysis": "⏳ Generando imagen basada en análisis...",
-            }
-
-            # Send initial status message if message object provided
+            # Initialize status message if needed
             status_message = None
             if message:
-                status_text = status_messages.get(operation_type, "⏳ Procesando...")
+                status_text = {
+                    "single": "⏳ Generando imagen...",
+                    "variation": "⏳ Generando variación...",
+                    "analysis": "⏳ Generando imagen basada en análisis...",
+                }.get(operation_type, "⏳ Procesando...")
                 status_message = await message.reply_text(status_text)
-                logging.info(
-                    f"Status message sent for {operation_type} operation - User: {user_id}"
-                )
 
-            # Get user config or default params
+            # Get configuration
             if user_id is not None:
-                input_params = await db.get_user_config(
-                    user_id, ReplicateService.default_params.copy()
-                )
-                logging.info(f"Using user-specific configuration for user {user_id}")
+                input_params = await db.get_user_config(user_id, ReplicateService.default_params.copy())
             else:
                 input_params = ReplicateService.default_params.copy()
-                logging.info("Using default configuration")
 
+            # Validate config
             trigger_word = input_params.get("trigger_word")
             model_endpoint = input_params.get("model_endpoint")
-
-            # Validate essential configurations
             if not trigger_word or not model_endpoint:
-                logging.error(f"User {user_id} missing required configurations.")
                 if status_message:
-                    await status_message.edit_text(
-                        "❌ Configuración incompleta. Por favor, establece la palabra clave y el endpoint del modelo usando el comando `/config`."
-                    )
+                    await status_message.edit_text("❌ Configuración incompleta.")
                 return None
 
-            # Always randomize seed before generation
+            # Prepare generation parameters
             input_params["seed"] = random.randint(1, 1000000)
             input_params["prompt"] = prompt
-            logging.info("Sending request to Replicate API")
+
+            # Generate image
             output = await replicate.async_run(
-                input_params["model_endpoint"],  # Use the configured model endpoint
+                input_params["model_endpoint"],
                 input=input_params,
             )
+
             if not output:
-                error_msg = (
-                    f"Empty response from Replicate - Operation: {operation_type}"
-                )
-                logging.error(error_msg)
                 if status_message:
-                    await status_message.edit_text(
-                        "❌ Error en la generación de imagen"
-                    )
+                    await status_message.edit_text("❌ Error en la generación de imagen")
                 return None
 
-            # Process successful generation
-            logging.info(f"Successfully generated image - Operation: {operation_type}")
-
-            # Get prediction details
-            predictions_page = await replicate.predictions.list()
-            if predictions_page.results:
-                latest_prediction = predictions_page.results[0]
-                logging.info(f"Retrieved prediction ID: {latest_prediction.id}")
-                # Store prediction data in database
-                await db.save_prediction(
-                    prediction_id=latest_prediction.id,
-                    user_id=user_id,
-                    prompt=prompt,
-                    input_params=json.dumps(input_params),
-                    output_url=output[0],
-                )
-                result = (
-                    output[0],
-                    latest_prediction.id,
-                    json.dumps(input_params, indent=2),
-                )
-                # Handle user communication for successful generation
-                if message and result:
-                    image_url, prediction_id, input_params = result
-
-                    # Clean up status message
-                    if status_message:
-                        await status_message.delete()
-                        logging.info(
-                            f"Deleted status message for {operation_type} operation"
-                        )
-
-                    # Send generation details
-                    await message.reply_text(
-                        format_generation_message(prediction_id, input_params),
-                        parse_mode="Markdown",
-                    )
-
-                    # Send generated image
-                    await message.reply_photo(
-                        photo=image_url, caption="🖼️ Imagen generada"
-                    )
-
-                    logging.info(
-                        f"Successfully sent results to user - Operation: {operation_type}, "
-                        f"Prediction ID: {prediction_id}"
-                    )
-
-                return result
-            else:
-                logging.error("No predictions found in response")
-                return None
-        except replicate.exceptions.ReplicateError as e:
-            error_msg = f"Replicate API error in {operation_type} operation: {str(e)}"
-            logging.error(error_msg, exc_info=True)
+            # Clean up status message if exists
             if status_message:
-                await status_message.edit_text("❌ Error en el servicio de generación")
-            return None
+                await status_message.delete()
+
+            return output[0]  # Return just the image URL
 
         except Exception as e:
-            error_msg = f"Unexpected error in {operation_type} operation: {str(e)}"
-            logging.error(error_msg, exc_info=True)
+            logging.error(f"Error generating image: {e}")
             if status_message:
                 await status_message.edit_text("❌ Error inesperado")
             return None
+
+    @staticmethod
+    async def save_predictions_for_images(image_urls: list, user_id: int, prompt: str, message=None):
+        """
+        Fetches prediction details for a list of generated images and saves them to database.
+        Args:
+            image_urls: List of generated image URLs to match with predictions
+            user_id: Telegram user ID
+            prompt: Original prompt used for generation
+            message: Optional telegram message for sending results
+        """
+        try:
+            predictions_page = replicate.predictions.list()
+            if predictions_page.results:
+                params = await db.get_user_config(user_id, ReplicateService.default_params.copy())
+
+                # Match predictions with our generated images
+                for prediction in predictions_page.results[:len(image_urls)]:
+                    if prediction.output and prediction.output[0] in image_urls:
+                        try:
+                            await db.save_prediction(
+                                prediction_id=prediction.id,
+                                user_id=user_id,
+                                prompt=prompt,
+                                input_params=json.dumps(params),
+                                output_url=prediction.output[0]
+                            )
+                            # Send complete info to user if message provided
+                            if message:
+                                await message.reply_text(
+                                    format_generation_message(prediction.id, json.dumps(params)),
+                                    parse_mode="Markdown",
+                                )
+                            logging.info(f"Saved prediction {prediction.id} for image {prediction.output[0]}")
+                        except Exception as e:
+                            logging.error(f"Error saving prediction: {e}")
+        except Exception as e:
+            logging.error(f"Error fetching/saving predictions: {e}")
