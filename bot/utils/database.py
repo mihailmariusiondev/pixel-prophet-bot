@@ -3,7 +3,6 @@ import json
 from pathlib import Path
 import logging
 
-
 # Create a singleton instance
 class Database:
     """
@@ -11,7 +10,6 @@ class Database:
     and generation history. Uses SQLite for persistent storage with automatic
     timestamp tracking for updates.
     """
-
     _instance = None
 
     def __new__(cls):
@@ -240,9 +238,8 @@ class Database:
             logging.error(f"Error retrieving last prediction: {e}", exc_info=True)
             return None
 
-
 # Create the singleton instance
 db = Database()
 
 # Export the singleton instance
-__all__ = ["db"]
+__all__ = ['db']
