@@ -25,10 +25,8 @@ class Database:
     def init_database(self):
         """
         Initializes the database schema if it doesn't exist.
-        Creates tables with appropriate constraints and defaults.
         """
         try:
-            # Use synchronous sqlite3 for initialization
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 # User configurations table
@@ -41,14 +39,13 @@ class Database:
                     )
                 """
                 )
-                # Predictions table
+                # Predictions table - simplified
                 cursor.execute(
                     """
                     CREATE TABLE IF NOT EXISTS predictions (
-                        prediction_id TEXT PRIMARY KEY,
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
                         user_id INTEGER,
                         prompt TEXT,
-                        input_params TEXT,
                         output_url TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY (user_id) REFERENCES user_configs(user_id)
@@ -123,34 +120,29 @@ class Database:
             logging.error(f"Error setting user config: {e}", exc_info=True)
             raise
 
-    async def save_prediction(
-        self, prediction_id, user_id, prompt, input_params, output_url
-    ):
+    async def save_prediction(self, user_id, prompt, output_url):
         """
-        Save prediction data for future reference
+        Save prediction data with auto-generated ID
         Args:
-            prediction_id: Unique identifier from Replicate
             user_id: Telegram user ID
             prompt: Original text prompt
-            input_params: JSON string of generation parameters
             output_url: URL of generated image
+        Returns:
+            int: The ID of the newly inserted prediction
         """
         try:
-            logging.info(f"Saving prediction data for ID: {prediction_id}")
             async with aiosqlite.connect(self.db_path) as conn:
                 cursor = await conn.cursor()
                 await cursor.execute(
                     """
                     INSERT INTO predictions
-                    (prediction_id, user_id, prompt, input_params, output_url)
-                    VALUES (?, ?, ?, ?, ?)
+                    (user_id, prompt, output_url)
+                    VALUES (?, ?, ?)
                     """,
-                    (prediction_id, user_id, prompt, input_params, output_url),
+                    (user_id, prompt, output_url),
                 )
                 await conn.commit()
-                logging.info(
-                    f"Successfully saved prediction {prediction_id} for user {user_id}"
-                )
+                return cursor.lastrowid
         except Exception as e:
             logging.error(f"Error saving prediction: {e}", exc_info=True)
             raise
@@ -161,7 +153,7 @@ class Database:
         Args:
             prediction_id: Unique identifier from Replicate
         Returns:
-            tuple: (prompt, input_params, output_url) or None if not found
+            tuple: (prompt, output_url) or None if not found
         """
         try:
             logging.info(f"Retrieving prediction data for ID: {prediction_id}")
@@ -169,7 +161,7 @@ class Database:
                 cursor = await conn.cursor()
                 await cursor.execute(
                     """
-                    SELECT prompt, input_params, output_url
+                    SELECT prompt, output_url
                     FROM predictions
                     WHERE prediction_id = ?
                     """,
@@ -191,7 +183,7 @@ class Database:
         Args:
             user_id: Telegram user ID
         Returns:
-            tuple: (prompt, input_params, output_url, prediction_id) or None if not found
+            tuple: (prompt, output_url, prediction_id) or None if not found
         """
         try:
             logging.info(f"Retrieving last prediction for user {user_id}")
@@ -199,7 +191,7 @@ class Database:
                 cursor = await conn.cursor()
                 await cursor.execute(
                     """
-                    SELECT prompt, input_params, output_url, prediction_id
+                    SELECT prompt, output_url, prediction_id
                     FROM predictions
                     WHERE user_id = ?
                     ORDER BY created_at DESC

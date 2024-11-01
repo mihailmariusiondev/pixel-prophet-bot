@@ -50,18 +50,13 @@ class ReplicateService:
                 }.get(operation_type, "⏳ Procesando...")
                 status_message = await message.reply_text(status_text)
 
-            # Get configuration
-            if user_id is not None:
-                input_params = await db.get_user_config(
-                    user_id, ReplicateService.default_params.copy()
-                )
-            else:
-                input_params = ReplicateService.default_params.copy()
+            # Get configuration - simplified
+            input_params = await db.get_user_config(
+                user_id, ReplicateService.default_params.copy()
+            ) if user_id is not None else ReplicateService.default_params.copy()
 
             # Validate config
-            trigger_word = input_params.get("trigger_word")
-            model_endpoint = input_params.get("model_endpoint")
-            if not trigger_word or not model_endpoint:
+            if not input_params.get("trigger_word") or not input_params.get("model_endpoint"):
                 if status_message:
                     await status_message.edit_text("❌ Configuración incompleta.")
                 return None, None
@@ -70,10 +65,6 @@ class ReplicateService:
             input_params["seed"] = random.randint(1, 1000000)
             input_params["prompt"] = prompt
 
-            # Añadimos logs antes de la generación
-            logging.info("Parámetros de entrada:")
-            logging.info(json.dumps(input_params, indent=2))
-
             # Generate image
             logging.info("Iniciando generación con async_run...")
             output = await replicate.async_run(
@@ -81,49 +72,28 @@ class ReplicateService:
                 input=input_params,
             )
 
-            logging.info(f"Output de la generación: {output}")
+            if not output or not output[0]:
+                raise Exception("No se generó ninguna imagen")
 
-            # Obtener la última predicción usando list
-            logging.info("Obteniendo información de la última predicción...")
-            predictions_page = replicate.predictions.list()
-            predictions = list(predictions_page.results)
-            last_prediction = predictions[0]
-
-            # Convertir la predicción a un diccionario con los campos que necesitamos
-            prediction_dict = {
-                "id": last_prediction.id,
-                "input": last_prediction.input,
-                "output": last_prediction.output[0],  # Tomamos el primer elemento de la lista
-                "status": last_prediction.status,
-                "created_at": last_prediction.created_at,
-                "completed_at": last_prediction.completed_at,
-            }
-
-            logging.info(f"Información completa de la predicción:")
-            logging.info(json.dumps(prediction_dict, indent=2))
-
-            # Guardar la información completa de la predicción en la base de datos
-            await db.save_prediction(
-                prediction_id=prediction_dict["id"],
+            # Save prediction with auto-generated ID
+            prediction_id = await db.save_prediction(
                 user_id=user_id,
                 prompt=prompt,
-                input_params=json.dumps(prediction_dict["input"]),
-                output_url=prediction_dict["output"],
+                output_url=output[0]
             )
 
-            # Clean up status message
+            # Clean up status message and send results
             if status_message:
                 await status_message.delete()
 
-            # Send generation details and image
             if message:
                 await message.reply_text(
-                    format_generation_message(prediction_dict["id"], json.dumps(prediction_dict["input"])),
+                    format_generation_message(prediction_id, json.dumps(input_params)),
                     parse_mode="Markdown"
                 )
                 await message.reply_photo(photo=output[0])
 
-            return output[0], input_params  # Return both URL and params used
+            return output[0], input_params
 
         except Exception as e:
             logging.error(f"Error generating image: {e}")

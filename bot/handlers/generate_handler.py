@@ -46,14 +46,12 @@ async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logging.info(
         f"Starting image generation - User: {user_id}, Prompt: {prompt[:100]}..."
     )
+
     try:
-        result = await ReplicateService.generate_image(
+        await ReplicateService.generate_image(
             prompt, user_id=user_id, message=update.message, operation_type="single"
         )
-        logging.info(f"Resultado final de la generación:")
-        logging.info(f"URL de imagen: {result[0]}")
-        logging.info(f"Parámetros usados: {json.dumps(result[1], indent=2)}")
-        logging.info(f"Image generation completed successfully - User: {user_id}")
+
     except Exception as e:
         logging.error(
             f"Failed to generate image - User: {user_id}, Error: {str(e)}",
