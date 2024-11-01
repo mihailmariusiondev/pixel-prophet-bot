@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import logging
 import sqlite3
+import uuid
 
 
 # Create a singleton instance
@@ -40,11 +41,12 @@ class Database:
                     )
                 """
                 )
-                # Predictions table - simplified
+                # Predictions table - añadido prediction_id
                 cursor.execute(
                     """
                     CREATE TABLE IF NOT EXISTS predictions (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        prediction_id TEXT UNIQUE NOT NULL,
                         user_id INTEGER,
                         prompt TEXT,
                         output_url TEXT,
@@ -123,38 +125,31 @@ class Database:
 
     async def save_prediction(self, user_id, prompt, output_url):
         """
-        Save prediction data with auto-generated ID
-        Args:
-            user_id: Telegram user ID
-            prompt: Original text prompt
-            output_url: URL of generated image
-        Returns:
-            int: The ID of the newly inserted prediction
+        Save prediction data with unique prediction_id
         """
         try:
+            prediction_id = str(uuid.uuid4())[
+                :8
+            ]  # Usando solo los primeros 8 caracteres para IDs más cortos
             async with aiosqlite.connect(self.db_path) as conn:
                 cursor = await conn.cursor()
                 await cursor.execute(
                     """
                     INSERT INTO predictions
-                    (user_id, prompt, output_url)
-                    VALUES (?, ?, ?)
+                    (prediction_id, user_id, prompt, output_url)
+                    VALUES (?, ?, ?, ?)
                     """,
-                    (user_id, prompt, output_url),
+                    (prediction_id, user_id, prompt, output_url),
                 )
                 await conn.commit()
-                return cursor.lastrowid
+                return prediction_id
         except Exception as e:
             logging.error(f"Error saving prediction: {e}", exc_info=True)
             raise
 
     async def get_prediction(self, prediction_id):
         """
-        Retrieve prediction data by ID
-        Args:
-            prediction_id: Unique identifier from Replicate
-        Returns:
-            tuple: (prompt, output_url) or None if not found
+        Retrieve prediction data by prediction_id
         """
         try:
             logging.info(f"Retrieving prediction data for ID: {prediction_id}")
@@ -181,10 +176,8 @@ class Database:
     async def get_last_prediction(self, user_id):
         """
         Get the most recent prediction for a specific user
-        Args:
-            user_id: Telegram user ID
         Returns:
-            tuple: (id, prompt, output_url) or None if not found
+            tuple: (id, prompt, output_url, prediction_id) or None if not found
         """
         try:
             logging.info(f"Retrieving last prediction for user {user_id}")
@@ -192,7 +185,7 @@ class Database:
                 cursor = await conn.cursor()
                 await cursor.execute(
                     """
-                    SELECT id, prompt, output_url
+                    SELECT id, prompt, output_url, prediction_id
                     FROM predictions
                     WHERE user_id = ?
                     ORDER BY created_at DESC

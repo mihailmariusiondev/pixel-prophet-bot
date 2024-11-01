@@ -81,18 +81,22 @@ class ReplicateService:
             if not output or not output[0]:
                 raise Exception("No se generó ninguna imagen")
 
-            # Save prediction with auto-generated ID
-            await db.save_prediction(
-                user_id=user_id, prompt=prompt, output_url=output[0]
+            # Save prediction and get prediction_id
+            prediction_id = await db.save_prediction(
+                user_id=user_id,
+                prompt=prompt,
+                output_url=output[0]
             )
 
-            # Clean up status message and send results
-            if status_message:
-                await status_message.delete()
-
-            if message:
-                await format_generation_message(prompt, message, output[0])
-
+            # Si la generación fue exitosa y tenemos un mensaje
+            if output and output[0] and message:
+                await format_generation_message(
+                    prompt,
+                    message,
+                    output[0],
+                    prediction_id
+                )
+            
             return output[0], input_params
 
         except Exception as e:

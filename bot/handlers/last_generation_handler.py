@@ -18,10 +18,8 @@ async def last_generation_handler(update: Update, context: ContextTypes.DEFAULT_
             await update.message.reply_text("❌ No hay generaciones previas.")
             return
 
-        prompt = last_prediction[1]  # prompt column
-        image_url = last_prediction[2]  # output_url column
-
-        await format_generation_message(prompt, update.message, image_url)
+        _, prompt, image_url, prediction_id = last_prediction  # Actualizado para incluir prediction_id
+        await format_generation_message(prompt, update.message, image_url, prediction_id)
 
     except Exception as e:
         logging.error(f"Error retrieving last generation for user {user_id}: {e}")

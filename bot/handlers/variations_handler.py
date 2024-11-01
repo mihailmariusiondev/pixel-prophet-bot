@@ -22,7 +22,9 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         if context.args:
             prediction_data = await db.get_prediction(context.args[0])
             if not prediction_data:
-                await update.message.reply_text("❌ No se encontraron datos para esta predicción.")
+                await update.message.reply_text(
+                    "❌ No se encontraron datos para esta predicción."
+                )
                 return
             prompt = prediction_data[0]
         else:
@@ -37,17 +39,19 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         # Generate 3 variations concurrently
         async with asyncio.TaskGroup() as tg:
             tasks = [
-                tg.create_task(ReplicateService.generate_image(
-                    prompt,
-                    user_id=user_id,
-                    message=update.message,
-                    operation_type="variation"
-                ))
+                tg.create_task(
+                    ReplicateService.generate_image(
+                        prompt,
+                        user_id=user_id,
+                        message=update.message,
+                        operation_type="variation",
+                    )
+                )
                 for _ in range(3)
             ]
 
         await status_message.delete()
     except Exception as e:
         logging.error(f"Error in variations_handler - User: {user_id}", exc_info=True)
-        if 'status_message' in locals():
+        if "status_message" in locals():
             await status_message.edit_text("❌ Error al generar las variaciones.")
