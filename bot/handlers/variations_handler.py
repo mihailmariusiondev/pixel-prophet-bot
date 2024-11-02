@@ -36,7 +36,7 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
         status_message = await update.message.reply_text("⏳ Generando variaciones...")
 
-        # Generate 3 variations concurrently
+        # Generate 3 variations concurrently, passing None as message to prevent individual status messages
         async with asyncio.TaskGroup() as tg:
             tasks = [
                 tg.create_task(

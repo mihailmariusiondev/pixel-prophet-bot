@@ -40,9 +40,9 @@ class ReplicateService:
             tuple: (image_url, input_params) or (None, None) on failure
         """
         try:
-            # Initialize status message if needed
+            # Initialize status message if needed - solo si NO es una variación
             status_message = None
-            if message:
+            if message and operation_type != "variation":
                 status_text = {
                     "single": "⏳ Generando imagen...",
                     "variation": "⏳ Generando variación...",
@@ -96,7 +96,7 @@ class ReplicateService:
                     output[0],
                     prediction_id
                 )
-            
+
             return output[0], input_params
 
         except Exception as e:

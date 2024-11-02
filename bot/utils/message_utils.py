@@ -8,19 +8,15 @@ async def format_generation_message(
     Format and optionally send a message with image for generation results.
     """
     try:
-        base_text = "📝 Prompt:  `"
+        base_text = "📝 Prompt: `"
         hint_text = (
-            f"\n\n💡 Usa `/variations {prediction_id}` para generar variaciones"
+            f"\n💡 Usa `/variations {prediction_id}` para generar variaciones"
             if prediction_id
             else ""
         )
 
-        max_prompt_length = (
-            4096 - len(base_text) - len(hint_text) - 1
-        )  # -1 for the closing backtick
-
-        if len(prompt) > max_prompt_length:
-            formatted_prompt = prompt[: max_prompt_length - 3] + "...`"
+        if len(prompt) > 4093:
+            formatted_prompt = prompt[:4090] + "...`"
         else:
             formatted_prompt = prompt + "`"
 
@@ -28,9 +24,8 @@ async def format_generation_message(
 
         # If message and image_url are provided, send to chat
         if message and image_url:
-            await message.reply_photo(
-                photo=image_url, caption=formatted_text, parse_mode="Markdown"
-            )
+            await message.reply_photo(photo=image_url)
+            await message.reply_text(formatted_text, parse_mode="Markdown")
             return None
 
         return formatted_text
