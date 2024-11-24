@@ -12,3 +12,4 @@ dependencies:
       - replicate
       - pydantic==1.9.0
       - aiosqlite
+      - aiohttp
