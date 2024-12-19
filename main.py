@@ -1,8 +1,8 @@
 from dotenv import load_dotenv
 import asyncio
 
-# Load environment variables before importing anything else
-load_dotenv()
+# Load environment variables, overriding existing ones
+load_dotenv(override=True)
 
 # Now import the bot after environment variables are loaded
 from bot.bot import run_bot
