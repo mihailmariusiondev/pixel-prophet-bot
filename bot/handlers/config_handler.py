@@ -37,7 +37,14 @@ ALLOWED_PARAMS = {
         "max_length": 200,
         "description": "Endpoint del modelo para generación de imágenes",
     },
+    "num_outputs": {
+        "type": "int",
+        "min": 1,
+        "max": 5,
+        "description": "Número de imágenes a generar por prompt",
+    },
 }
+
 
 async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
@@ -73,7 +80,8 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "• `guidance_scale`: Controla qué tan cerca sigue el prompt (0-10)\n"
                 "• `prompt_strength`: Balance entre prompt e imagen (0-1)\n"
                 "• `trigger_word`: Palabra clave para entrenamiento LoRA (1-50 caracteres)\n"
-                "• `model_endpoint`: Endpoint del modelo para generación de imágenes (1-200 caracteres)"
+                "• `model_endpoint`: Endpoint del modelo para generación de imágenes (1-200 caracteres)\n"
+                "• `num_outputs`: Número de imágenes a generar por prompt (1-5)"
             )
             message = (
                 "🛠️ *Configuración actual:*\n\n"
@@ -118,7 +126,7 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     <= ALLOWED_PARAMS[param]["max"]
                 ):
                     raise ValueError(
-                        f"Value must be between {ALLOWED_PARAMS[param]['min']} and {ALLOWED_PARAMS[param]['max']}"
+                        f"El valor debe estar entre {ALLOWED_PARAMS[param]['min']} y {ALLOWED_PARAMS[param]['max']}"
                     )
             elif ALLOWED_PARAMS[param]["type"] == "int":
                 value = int(value)
@@ -128,7 +136,7 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     <= ALLOWED_PARAMS[param]["max"]
                 ):
                     raise ValueError(
-                        f"Value must be between {ALLOWED_PARAMS[param]['min']} and {ALLOWED_PARAMS[param]['max']}"
+                        f"El valor debe estar entre {ALLOWED_PARAMS[param]['min']} y {ALLOWED_PARAMS[param]['max']}"
                     )
             elif ALLOWED_PARAMS[param]["type"] == "str":
                 if not (
@@ -137,7 +145,7 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     <= ALLOWED_PARAMS[param]["max_length"]
                 ):
                     raise ValueError(
-                        f"Length must be entre {ALLOWED_PARAMS[param]['min_length']} y {ALLOWED_PARAMS[param]['max_length']} caracteres"
+                        f"La longitud debe estar entre {ALLOWED_PARAMS[param]['min_length']} y {ALLOWED_PARAMS[param]['max_length']} caracteres"
                     )
             logging.info(
                 f"Parameter '{param}' validated successfully with value '{value}'"
@@ -151,7 +159,9 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
         # Update the config
-        config = await db.get_user_config(user_id, ReplicateService.default_params.copy())
+        config = await db.get_user_config(
+            user_id, ReplicateService.default_params.copy()
+        )
         old_value = config.get(param)
         config[param] = value
         await db.set_user_config(user_id, config)

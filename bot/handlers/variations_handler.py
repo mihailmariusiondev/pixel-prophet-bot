@@ -5,19 +5,23 @@ from ..utils.database import db
 import logging
 from ..utils.decorators import require_configured
 import asyncio
-import random
-import json
-import replicate
-from ..utils import format_generation_message
 
 
 @require_configured
 async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
-    Generates 3 variations of existing images based on their prompts.
+    Generates variations of existing images based on their prompts.
+    Uses num_outputs from user config to determine how many variations to generate.
     """
     try:
         user_id = update.effective_user.id
+
+        # Get user config to determine num_outputs
+        config = await db.get_user_config(
+            user_id, ReplicateService.default_params.copy()
+        )
+        num_outputs = config.get("num_outputs", 1)  # Default to 1 if not set
+
         # Get prompt from specific prediction or last generation
         if context.args:
             prediction_data = await db.get_prediction(context.args[0])
@@ -34,9 +38,15 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 return
             prompt = last_prediction[1]
 
-        status_message = await update.message.reply_text("⏳ Generando variaciones...")
+        # Un solo mensaje de estado según el número de imágenes
+        status_text = (
+            "⏳ Generando variación..."
+            if num_outputs == 1
+            else f"⏳ Generando {num_outputs} variaciones..."
+        )
+        status_message = await update.message.reply_text(status_text)
 
-        # Generate 3 variations concurrently, passing None as message to prevent individual status messages
+        # Generate variations concurrently
         async with asyncio.TaskGroup() as tg:
             tasks = [
                 tg.create_task(
@@ -47,10 +57,11 @@ async def variations_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                         operation_type="variation",
                     )
                 )
-                for _ in range(3)
+                for _ in range(num_outputs)
             ]
 
         await status_message.delete()
+
     except Exception as e:
         logging.error(f"Error in variations_handler - User: {user_id}", exc_info=True)
         if "status_message" in locals():

@@ -1,10 +1,8 @@
 import replicate
 import logging
-import json
 from ..utils.database import db
 import random
 from ..utils.message_utils import format_generation_message
-import asyncio
 
 
 class ReplicateService:
@@ -20,7 +18,7 @@ class ReplicateService:
         "seed": -1,  # Default seed value, will be randomized during generation
         "model": "dev",  # Model version
         "lora_scale": 1,  # LoRA adaptation strength
-        "num_outputs": 1,  # Number of images to generate
+        "num_outputs": 1,  # Default to single image generation
         "aspect_ratio": "4:5",  # Standard Instagram ratio
         "output_format": "jpg",  # Compressed format for efficiency
         "guidance_scale": 0,  # How closely to follow the prompt
@@ -43,12 +41,9 @@ class ReplicateService:
             # Initialize status message if needed - solo si NO es una variación
             status_message = None
             if message and operation_type != "variation":
-                status_text = {
-                    "single": "⏳ Generando imagen...",
-                    "variation": "⏳ Generando variación...",
-                    "analysis": "⏳ Generando imagen basada en análisis...",
-                }.get(operation_type, "⏳ Procesando...")
-                status_message = await message.reply_text(status_text)
+                # Eliminamos los mensajes individuales por imagen
+                if status_message:
+                    await status_message.delete()
 
             # Get configuration - simplified
             input_params = (
@@ -83,18 +78,13 @@ class ReplicateService:
 
             # Save prediction and get prediction_id
             prediction_id = await db.save_prediction(
-                user_id=user_id,
-                prompt=prompt,
-                output_url=output[0]
+                user_id=user_id, prompt=prompt, output_url=output[0]
             )
 
             # Si la generación fue exitosa y tenemos un mensaje
             if output and output[0] and message:
                 await format_generation_message(
-                    prompt,
-                    message,
-                    output[0],
-                    prediction_id
+                    prompt, message, output[0], prediction_id
                 )
 
             return output[0], input_params
