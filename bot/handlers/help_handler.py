@@ -33,7 +33,6 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "*Comandos principales:*\n"
                 "`/generate` \\- Genera una imagen a partir de tu descripción\n"
                 "`/variations` \\- Genera 3 variaciones de una imagen\n"
-                "`/last_generation` \\- Muestra tu última generación\n"
             ),
             "other_features": (
                 "*Otras funciones:*\n"

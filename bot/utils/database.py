@@ -128,14 +128,19 @@ class Database:
         Save prediction data with unique prediction_id using full UUID
         """
         try:
-            prediction_id = str(uuid.uuid4())  # UUID completo, ej: 550e8400-e29b-41d4-a716-446655440000
+            prediction_id = str(
+                uuid.uuid4()
+            )  # UUID completo, ej: 550e8400-e29b-41d4-a716-446655440000
             async with aiosqlite.connect(self.db_path) as conn:
                 cursor = await conn.cursor()
-                await cursor.execute("""
+                await cursor.execute(
+                    """
                     INSERT INTO predictions
                     (prediction_id, user_id, prompt, output_url)
                     VALUES (?, ?, ?, ?)
-                    """, (prediction_id, user_id, prompt, output_url))
+                    """,
+                    (prediction_id, user_id, prompt, output_url),
+                )
                 await conn.commit()
                 return prediction_id
         except Exception as e:
@@ -166,31 +171,6 @@ class Database:
                 return result
         except Exception as e:
             logging.error(f"Error retrieving prediction: {e}", exc_info=True)
-            return None
-
-    async def get_last_prediction(self, user_id):
-        """
-        Get the most recent prediction for a specific user
-        Returns:
-            tuple: (id, prompt, output_url, prediction_id) or None if not found
-        """
-        try:
-            logging.info(f"Retrieving last prediction for user {user_id}")
-            async with aiosqlite.connect(self.db_path) as conn:
-                cursor = await conn.cursor()
-                await cursor.execute(
-                    """
-                    SELECT id, prompt, output_url, prediction_id
-                    FROM predictions
-                    WHERE user_id = ?
-                    ORDER BY created_at DESC
-                    LIMIT 1
-                    """,
-                    (user_id,),
-                )
-                return await cursor.fetchone()
-        except Exception as e:
-            logging.error(f"Error retrieving last prediction: {e}", exc_info=True)
             return None
 
 
