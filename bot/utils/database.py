@@ -41,20 +41,6 @@ class Database:
                     )
                 """
                 )
-                # Predictions table - añadido prediction_id
-                cursor.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS predictions (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        prediction_id TEXT UNIQUE NOT NULL,
-                        user_id INTEGER,
-                        prompt TEXT,
-                        output_url TEXT,
-                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        FOREIGN KEY (user_id) REFERENCES user_configs(user_id)
-                    )
-                """
-                )
                 conn.commit()
         except Exception as e:
             logging.error(f"Error initializing database: {e}")

@@ -9,11 +9,7 @@ async def format_generation_message(
     """
     try:
         base_text = "📝 Prompt: `"
-        hint_text = (
-            f"\n💡 Usa `/variations {prediction_id}` para generar variaciones"
-            if prediction_id
-            else ""
-        )
+        hint_text = ""
 
         if len(prompt) > 4093:
             formatted_prompt = prompt[:4090] + "...`"

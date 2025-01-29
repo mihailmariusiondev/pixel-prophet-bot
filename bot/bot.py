@@ -8,7 +8,6 @@ from .handlers import (
     error_handler,
     generate_handler,
     config_handler,
-    variations_handler,
     analyze_image_handler,
 )
 from .utils.logging_config import setup_logging
@@ -44,7 +43,6 @@ def run_bot():
     application.add_handler(CommandHandler("about", about_handler))
     application.add_handler(CommandHandler("generate", generate_handler))
     application.add_handler(CommandHandler("config", config_handler))
-    application.add_handler(CommandHandler("variations", variations_handler))
 
     application.add_handler(MessageHandler(filters.PHOTO, analyze_image_handler))
     logging.info("Command handlers registered")

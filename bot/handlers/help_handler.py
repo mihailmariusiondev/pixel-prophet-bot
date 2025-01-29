@@ -32,7 +32,6 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "main_commands": (
                 "*Comandos principales:*\n"
                 "`/generate` \\- Genera una imagen a partir de tu descripción\n"
-                "`/variations` \\- Genera 3 variaciones de una imagen\n"
             ),
             "other_features": (
                 "*Otras funciones:*\n"
@@ -52,13 +51,10 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "examples": (
                 "*📝 Ejemplos:*\n"
                 "• `/generate un gato jugando ajedrez en la luna`\n"
-                "• `/variations abc123` \\(usando el ID de una generación\\)\n"
                 "• `/config seed 42`\n"
             ),
             "tips": (
                 "*💡 Tips:*\n"
-                "• Puedes copiar el ID de cualquier generación para usar con variations\n"
-                "• Si usas variations sin ID, se usará tu última generación\n"
                 "• Usa config para personalizar los parámetros de generación\n"
             ),
         }
