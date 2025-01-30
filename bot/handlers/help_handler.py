@@ -2,86 +2,72 @@ from telegram import Update
 from telegram.ext import ContextTypes
 import logging
 from ..utils.decorators import require_configured
+from ..services.prompt_styles.manager import style_manager
+from ..services.replicate_service import ReplicateService
+from ..handlers.config_handler import ALLOWED_PARAMS
 
 
 @require_configured
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
-    Provides comprehensive help information about bot commands and features.
-    Organizes help content into sections for better readability.
-
-    Args:
-        update: Telegram update containing the message
-        context: Bot context for maintaining state
-
-    Flow:
-    1. Prepares help sections with command descriptions
-    2. Formats and sends help message to user
+    Handle the /help command.
+    Shows detailed information about bot usage and available commands.
     """
     user_id = update.effective_user.id
     username = update.effective_user.username or "Unknown"
-    chat_id = update.effective_chat.id
-    logging.info(
-        f"Help command received from user {user_id} ({username}) in chat {chat_id}"
+    logging.info(f"Help command received - User: {user_id} ({username})")
+
+    # Main commands section
+    commands_help = (
+        "🤖 *Comandos disponibles:*\n\n"
+        "• `/generate [prompt]` - Genera imágenes a partir de un prompt\n"
+        "• `/generate [número]` - Genera múltiples imágenes con prompts aleatorios\n"
+        "• `/config` - Muestra la configuración actual\n"
+        "• `/config [param] [valor]` - Modifica un parámetro de configuración\n"
+        "• `/help` - Muestra este mensaje de ayuda\n\n"
     )
 
-    try:
-        logging.info(f"Preparing help sections for user {user_id}")
-        # Structure help text into sections
-        help_sections = {
-            "main_commands": (
-                "*Comandos principales:*\n"
-                "`/generate` \\- Genera una imagen a partir de tu descripción\n"
-            ),
-            "other_features": (
-                "*Otras funciones:*\n"
-                "• Envía una imagen para analizarla y generar una similar\n"
-            ),
-            "configuration": (
-                "*Configuración:*\n"
-                "`/config` \\- Ver tu configuración actual\n"
-                "`/config <parámetro> <valor>` \\- Modifica un parámetro\n"
-            ),
-            "basic_commands": (
-                "*Otros comandos:*\n"
-                "`/start` \\- Inicia el bot\n"
-                "`/about` \\- Información sobre el bot\n"
-                "`/help` \\- Muestra este mensaje\n"
-            ),
-            "examples": (
-                "*📝 Ejemplos:*\n"
-                "• `/generate un gato jugando ajedrez en la luna`\n"
-                "• `/config seed 42`\n"
-            ),
-            "tips": (
-                "*💡 Tips:*\n"
-                "• Usa config para personalizar los parámetros de generación\n"
-            ),
-        }
-        logging.info(f"Help sections prepared for user {user_id}")
+    # Configuration parameters section
+    config_help = "⚙️ *Parámetros de configuración:*\n\n"
+    for param, details in ALLOWED_PARAMS.items():
+        config_help += f"• `{param}`: {details['description']}\n"
+        if details["type"] == "str" and "allowed_values" in details:
+            config_help += (
+                f"  Valores permitidos: {', '.join(details['allowed_values'])}\n"
+            )
+        elif details["type"] == "str":
+            config_help += f"  Longitud: {details['min_length']}-{details['max_length']} caracteres\n"
+        else:
+            config_help += f"  Rango: {details['min']}-{details['max']}\n"
+        config_help += "\n"
 
-        # Combine all sections
-        help_text = "\n\n".join(
-            [
-                "*🤖 Guía de PixelProphetBot*\n",
-                help_sections["main_commands"],
-                help_sections["other_features"],
-                help_sections["configuration"],
-                help_sections["basic_commands"],
-                help_sections["examples"],
-                help_sections["tips"],
-            ]
-        )
+    # Examples section
+    examples = (
+        "📝 *Ejemplos:*\n\n"
+        "1. Generar una imagen con un prompt:\n"
+        "`/generate ESTEVE un hombre sentado en un café, mirando pensativamente por la ventana`\n\n"
+        "2. Generar 3 imágenes con prompts aleatorios:\n"
+        "`/generate 3`\n\n"
+        "3. Cambiar el estilo de generación:\n"
+        "`/config style vintage`\n\n"
+        "4. Ajustar la calidad de generación:\n"
+        "`/config num_inference_steps 40`\n\n"
+    )
 
-        logging.info(f"Sending help message to user {user_id}")
-        await update.message.reply_text(help_text, parse_mode="MarkdownV2")
-        logging.info(f"Help message successfully sent to user {user_id}")
+    # Tips section
+    tips = (
+        "💡 *Tips:*\n\n"
+        "• Los prompts deben ser detallados y descriptivos\n"
+        "• Especifica siempre la dirección de la mirada del sujeto\n"
+        "• Evita movimiento o poses dinámicas\n"
+        "• No especifiques edad ni características físicas específicas\n"
+        "• Usa el estilo que mejor se adapte a tu necesidad\n"
+    )
 
-    except Exception as e:
-        logging.error(
-            f"Error sending help message to user {user_id} in chat {chat_id}: {str(e)}",
-            exc_info=True,
-        )
-        await update.message.reply_text(
-            "❌ Error al mostrar la ayuda. Por favor, intenta nuevamente."
-        )
+    # Combine all sections
+    full_help = f"{commands_help}{config_help}{examples}{tips}"
+
+    # Send help message
+    await update.message.reply_text(
+        full_help, parse_mode="Markdown", disable_web_page_preview=True
+    )

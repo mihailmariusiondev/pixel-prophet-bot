@@ -4,9 +4,38 @@ from ..services.replicate_service import ReplicateService
 import json
 import logging
 from ..utils.database import db
+from ..services.prompt_styles.manager import style_manager
 
 # Define the allowed parameters and their order
 ALLOWED_PARAMS = {
+    "gender": {
+        "type": "str",
+        "allowed_values": ["male", "female"],
+        "description": "Género para la generación de imágenes",
+    },
+    "trigger_word": {
+        "type": "str",
+        "min_length": 1,
+        "max_length": 50,
+        "description": "Palabra clave para entrenamiento LoRA",
+    },
+    "model_endpoint": {
+        "type": "str",
+        "min_length": 1,
+        "max_length": 200,
+        "description": "Endpoint del modelo para generación de imágenes",
+    },
+    "style": {
+        "type": "str",
+        "description": "Estilo de los prompts generados",
+        # allowed_values se validará en runtime
+    },
+    "num_outputs": {
+        "type": "int",
+        "min": 1,
+        "max": 5,
+        "description": "Número de imágenes a generar por prompt",
+    },
     "num_inference_steps": {
         "type": "int",
         "min": 1,
@@ -25,120 +54,101 @@ ALLOWED_PARAMS = {
         "max": 1,
         "description": "Balance entre prompt e imagen",
     },
-    "trigger_word": {
-        "type": "str",
-        "min_length": 1,
-        "max_length": 50,
-        "description": "Palabra clave para entrenamiento LoRA",
-    },
-    "model_endpoint": {
-        "type": "str",
-        "min_length": 1,
-        "max_length": 200,
-        "description": "Endpoint del modelo para generación de imágenes",
-    },
-    "num_outputs": {
-        "type": "int",
-        "min": 1,
-        "max": 5,
-        "description": "Número de imágenes a generar por prompt",
-    },
 }
 
 
 async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
-    Handle the /config command to view or modify generation parameters.
-    Only allows modification of specific approved parameters within defined limits.
-    Args:
-        update: Telegram update containing the message
-        context: Bot context containing parameter arguments
-    Flow:
-    1. If no args: shows current config and help
-    2. If args: validates and updates specified parameter
-    3. Shows updated configuration after changes
+    Handle the /config command.
+    If no arguments are provided, shows current configuration.
+    If arguments are provided, updates the specified parameter.
+    Format: /config [param] [value]
     """
     user_id = update.effective_user.id
     username = update.effective_user.username or "Unknown"
-    args = context.args
-    logging.info(
-        f"Config command received from user {user_id} ({username}) with args: {args}"
-    )
-    try:
-        # Show current config if no arguments
-        if not args:
-            logging.info(f"Showing current config for user {user_id}")
-            config = await db.get_user_config(user_id, ReplicateService.default_params)
-            # Create ordered filtered config using ALLOWED_PARAMS order
-            filtered_config = {
-                param: config.get(param) for param in ALLOWED_PARAMS if param in config
-            }
-            logging.info(f"Filtered config for user {user_id}: {filtered_config}")
-            # Create help message with parameter limits
-            help_text = (
-                "• `num_inference_steps`: Calidad/velocidad trade-off (1-50)\n"
-                "• `guidance_scale`: Controla qué tan cerca sigue el prompt (0-10)\n"
-                "• `prompt_strength`: Balance entre prompt e imagen (0-1)\n"
-                "• `trigger_word`: Palabra clave para entrenamiento LoRA (1-50 caracteres)\n"
-                "• `model_endpoint`: Endpoint del modelo para generación de imágenes (1-200 caracteres)\n"
-                "• `num_outputs`: Número de imágenes a generar por prompt (1-5)"
-            )
-            message = (
-                "🛠️ *Configuración actual:*\n\n"
-                f"`{json.dumps(filtered_config, indent=2)}`\n\n"
-                "📝 *Parámetros disponibles:*\n"
-                f"{help_text}\n\n"
-                "Para modificar usa:\n"
-                "`/config <parámetro> <valor>`\n\n"
-                "Ejemplo:\n"
-                "`/config guidance_scale 7.5`"
-            )
-            logging.info(f"Sending current configuration to user {user_id}")
-            await update.message.reply_text(message, parse_mode="Markdown")
-            return
-        # Validate argument format
-        if len(args) != 2:
-            logging.warning(f"Invalid config format from user {user_id}: {args}")
-            await update.message.reply_text(
-                "❌ Formato incorrecto. Usa:\n" "/config <parámetro> <valor>"
-            )
-            return
-        param, value = args[0], args[1]
-        logging.info(
-            f"User {user_id} attempting to update parameter '{param}' with value '{value}'"
+    logging.info(f"Config command received - User: {user_id} ({username})")
+
+    # Get current config with defaults
+    config = await db.get_user_config(user_id, ReplicateService.default_params.copy())
+
+    # Add default gender if not present
+    if "gender" not in config:
+        config["gender"] = "male"
+
+    # If no arguments provided, just show current config
+    if len(context.args) == 0:
+        # Format current configuration
+        config_text = "⚙️ Configuración actual:\n\n"
+        # Show all allowed parameters in a specific order
+        param_order = [
+            "gender",
+            "trigger_word",
+            "model_endpoint",
+            "style",
+            "num_outputs",
+            "num_inference_steps",
+            "guidance_scale",
+            "prompt_strength",
+        ]
+
+        for param in param_order:
+            if param in ALLOWED_PARAMS:
+                value = config.get(param, "no configurado")
+                config_text += f"`{param}`: `{value}`\n"
+
+        await update.message.reply_text(config_text, parse_mode="Markdown")
+        return
+
+    # If arguments provided, try to update config
+    if len(context.args) != 2:
+        await update.message.reply_text(
+            "❌ Formato incorrecto. Usa `/config` para ver la configuración actual o `/help` para ver instrucciones.",
+            parse_mode="Markdown",
         )
-        # Validate parameter is allowed
-        if param not in ALLOWED_PARAMS:
-            logging.warning(f"Invalid parameter '{param}' requested by user {user_id}")
-            await update.message.reply_text(
-                f"❌ Parámetro '{param}' no válido.\n"
-                f"Parámetros disponibles:\n"
-                f"{', '.join(ALLOWED_PARAMS.keys())}"
-            )
-            return
-        # Convert and validate value
-        try:
-            if ALLOWED_PARAMS[param]["type"] == "float":
-                value = float(value)
-                if not (
-                    ALLOWED_PARAMS[param]["min"]
-                    <= value
-                    <= ALLOWED_PARAMS[param]["max"]
-                ):
+        return
+
+    param, value = context.args[0].lower(), context.args[1]
+
+    # Check if parameter exists
+    if param not in ALLOWED_PARAMS:
+        await update.message.reply_text(
+            "❌ Parámetro no válido. Usa `/help` para ver los parámetros disponibles.",
+            parse_mode="Markdown",
+        )
+        return
+
+    # Convert and validate value
+    try:
+        if ALLOWED_PARAMS[param]["type"] == "float":
+            value = float(value)
+            if not (
+                ALLOWED_PARAMS[param]["min"] <= value <= ALLOWED_PARAMS[param]["max"]
+            ):
+                raise ValueError(
+                    f"El valor debe estar entre {ALLOWED_PARAMS[param]['min']} y {ALLOWED_PARAMS[param]['max']}"
+                )
+        elif ALLOWED_PARAMS[param]["type"] == "int":
+            value = int(value)
+            if not (
+                ALLOWED_PARAMS[param]["min"] <= value <= ALLOWED_PARAMS[param]["max"]
+            ):
+                raise ValueError(
+                    f"El valor debe estar entre {ALLOWED_PARAMS[param]['min']} y {ALLOWED_PARAMS[param]['max']}"
+                )
+        elif ALLOWED_PARAMS[param]["type"] == "str":
+            if param == "style":
+                # Validación especial para estilos en runtime
+                available_styles = style_manager.get_available_styles()
+                if value not in available_styles:
                     raise ValueError(
-                        f"El valor debe estar entre {ALLOWED_PARAMS[param]['min']} y {ALLOWED_PARAMS[param]['max']}"
+                        f"El estilo debe ser uno de: {', '.join(available_styles)}"
                     )
-            elif ALLOWED_PARAMS[param]["type"] == "int":
-                value = int(value)
-                if not (
-                    ALLOWED_PARAMS[param]["min"]
-                    <= value
-                    <= ALLOWED_PARAMS[param]["max"]
-                ):
+            elif "allowed_values" in ALLOWED_PARAMS[param]:
+                if value not in ALLOWED_PARAMS[param]["allowed_values"]:
                     raise ValueError(
-                        f"El valor debe estar entre {ALLOWED_PARAMS[param]['min']} y {ALLOWED_PARAMS[param]['max']}"
+                        f"El valor debe ser uno de: {', '.join(ALLOWED_PARAMS[param]['allowed_values'])}"
                     )
-            elif ALLOWED_PARAMS[param]["type"] == "str":
+            else:
                 if not (
                     ALLOWED_PARAMS[param]["min_length"]
                     <= len(value)
@@ -147,39 +157,28 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     raise ValueError(
                         f"La longitud debe estar entre {ALLOWED_PARAMS[param]['min_length']} y {ALLOWED_PARAMS[param]['max_length']} caracteres"
                     )
-            logging.info(
-                f"Parameter '{param}' validated successfully with value '{value}'"
-            )
-        except ValueError as e:
-            logging.warning(
-                f"Invalid value for parameter {param} from user {user_id}: {value}. Error: {str(e)}"
-            )
-            await update.message.reply_text(
-                f"❌ Valor no válido para `{param}`.\n{str(e)}"
-            )
-            return
-        # Update the config
+
+        # Get current config and update it
         config = await db.get_user_config(
             user_id, ReplicateService.default_params.copy()
         )
-        old_value = config.get(param)
         config[param] = value
         await db.set_user_config(user_id, config)
-        logging.info(
-            f"Config updated - User: {user_id}, Param: {param}, Old: {old_value}, New: {value}"
-        )
-        # Show updated config
-        filtered_config = {k: v for k, v in config.items() if k in ALLOWED_PARAMS}
-        message = (
-            "✅ *Parámetro actualizado:*\n"
-            f"`{param}`: `{old_value}` → `{value}`\n\n"
-            "🛠️ *Configuración actual:*\n\n"
-            f"`{json.dumps(filtered_config, indent=2)}`"
-        )
-        logging.info(f"Sending updated configuration to user {user_id}")
-        await update.message.reply_text(message, parse_mode="Markdown")
-    except Exception as e:
-        logging.error(f"Error in config_handler for user {user_id}: {e}", exc_info=True)
+
+        # Show success message with updated value
         await update.message.reply_text(
-            "❌ Ocurrió un error al procesar la configuración."
+            f"✅ Configuración actualizada: `{param}` = `{value}`",
+            parse_mode="Markdown",
+        )
+
+    except ValueError as e:
+        await update.message.reply_text(
+            f"❌ Error: {str(e)}. Usa `/help` para más información.",
+            parse_mode="Markdown",
+        )
+    except Exception as e:
+        logging.error(f"Error updating config: {str(e)}", exc_info=True)
+        await update.message.reply_text(
+            "❌ Error inesperado al actualizar la configuración.",
+            parse_mode="Markdown",
         )

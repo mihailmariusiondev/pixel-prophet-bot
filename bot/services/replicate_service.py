@@ -3,6 +3,7 @@ import logging
 from ..utils.database import db
 import random
 from ..utils.message_utils import format_generation_message
+import json
 
 
 class ReplicateService:
@@ -26,6 +27,8 @@ class ReplicateService:
         "prompt_strength": 0.8,  # Balance between prompt and image
         "extra_lora_scale": 1,  # Additional LoRA adjustment
         "num_inference_steps": 28,  # Balance between quality and speed
+        "gender": "male",  # Default gender for prompt generation
+        "style": "professional",  # Default style for prompt generation
     }
 
     @staticmethod
@@ -38,6 +41,10 @@ class ReplicateService:
             tuple: (image_url, input_params) or (None, None) on failure
         """
         try:
+            # Log the full prompt and its length for debugging
+            logging.info(f"Full prompt length: {len(prompt)} characters")
+            logging.info(f"Full prompt content: {prompt}")
+
             # Initialize status message if needed - solo si NO es una variación
             status_message = None
             if message and operation_type != "variation":
@@ -65,6 +72,14 @@ class ReplicateService:
             # Prepare generation parameters
             input_params["seed"] = random.randint(1, 1000000)
             input_params["prompt"] = prompt
+
+            # Log the parameters being sent to Replicate
+            logging.info(
+                f"Sending to Replicate - Prompt length: {len(input_params['prompt'])} characters"
+            )
+            logging.info(
+                f"Sending to Replicate - Full parameters: {json.dumps(input_params, indent=2)}"
+            )
 
             # Generate image
             logging.info("Iniciando generación con async_run...")
