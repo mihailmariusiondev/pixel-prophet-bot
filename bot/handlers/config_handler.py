@@ -25,11 +25,6 @@ ALLOWED_PARAMS = {
         "max_length": 200,
         "description": "Endpoint del modelo para generación de imágenes",
     },
-    "style": {
-        "type": "str",
-        "description": "Estilo de los prompts generados",
-        # allowed_values se validará en runtime
-    },
     "num_outputs": {
         "type": "int",
         "min": 1,
@@ -84,7 +79,6 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "gender",
             "trigger_word",
             "model_endpoint",
-            "style",
             "num_outputs",
             "num_inference_steps",
             "guidance_scale",
@@ -136,14 +130,7 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"El valor debe estar entre {ALLOWED_PARAMS[param]['min']} y {ALLOWED_PARAMS[param]['max']}"
                 )
         elif ALLOWED_PARAMS[param]["type"] == "str":
-            if param == "style":
-                # Validación especial para estilos en runtime
-                available_styles = style_manager.get_available_styles()
-                if value not in available_styles:
-                    raise ValueError(
-                        f"El estilo debe ser uno de: {', '.join(available_styles)}"
-                    )
-            elif "allowed_values" in ALLOWED_PARAMS[param]:
+            if "allowed_values" in ALLOWED_PARAMS[param]:
                 if value not in ALLOWED_PARAMS[param]["allowed_values"]:
                     raise ValueError(
                         f"El valor debe ser uno de: {', '.join(ALLOWED_PARAMS[param]['allowed_values'])}"

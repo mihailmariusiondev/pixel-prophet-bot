@@ -22,6 +22,7 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🤖 *Comandos disponibles:*\n\n"
         "• `/generate [prompt]` - Genera imágenes a partir de un prompt\n"
         "• `/generate [número]` - Genera múltiples imágenes con prompts aleatorios\n"
+        "• `/generate [número] styles=estilo1,estilo2` - Genera imágenes con estilos específicos\n"
         "• `/config` - Muestra la configuración actual\n"
         "• `/config [param] [valor]` - Modifica un parámetro de configuración\n"
         "• `/help` - Muestra este mensaje de ayuda\n\n"
@@ -41,6 +42,14 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             config_help += f"  Rango: {details['min']}-{details['max']}\n"
         config_help += "\n"
 
+    # Styles section
+    available_styles = style_manager.get_available_styles()
+    styles_help = (
+        "🎨 *Estilos disponibles:*\n\n"
+        f"• {', '.join(f'`{style}`' for style in available_styles if style != 'random')}\n"
+        "• `random` - Selecciona un estilo aleatorio\n\n"
+    )
+
     # Examples section
     examples = (
         "📝 *Ejemplos:*\n\n"
@@ -48,8 +57,8 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "`/generate ESTEVE un hombre sentado en un café, mirando pensativamente por la ventana`\n\n"
         "2. Generar 3 imágenes con prompts aleatorios:\n"
         "`/generate 3`\n\n"
-        "3. Cambiar el estilo de generación:\n"
-        "`/config style vintage`\n\n"
+        "3. Generar 4 imágenes con estilos específicos:\n"
+        "`/generate 4 styles=vintage,urban`\n\n"
         "4. Ajustar la calidad de generación:\n"
         "`/config num_inference_steps 40`\n\n"
     )
@@ -61,11 +70,11 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• Especifica siempre la dirección de la mirada del sujeto\n"
         "• Evita movimiento o poses dinámicas\n"
         "• No especifiques edad ni características físicas específicas\n"
-        "• Usa el estilo que mejor se adapte a tu necesidad\n"
+        "• Puedes combinar múltiples estilos en una sola generación\n"
     )
 
     # Combine all sections
-    full_help = f"{commands_help}{config_help}{examples}{tips}"
+    full_help = f"{commands_help}{config_help}{styles_help}{examples}{tips}"
 
     # Send help message
     await update.message.reply_text(

@@ -14,9 +14,10 @@ from ..services.prompt_styles.manager import style_manager
 async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Handles concurrent image generation from text prompt.
-    Supports two modes:
+    Supports multiple modes:
     1. Single prompt mode: /generate [prompt] - Generates num_outputs images of the same prompt
-    2. Batch mode: /generate [number] - Generates exactly [number] different images from different prompts
+    2. Batch mode with styles: /generate [number] styles=style1,style2 - Generates images with specified styles
+    3. Batch mode default: /generate [number] - Generates images with user's default style
     """
     user_id = update.effective_user.id
     username = update.effective_user.username or "Unknown"
@@ -28,6 +29,7 @@ async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if len(update.message.text.split(" ", 1)) > 1
         else ""
     )
+
     if not text:
         logging.warning(f"Empty input received - User: {user_id}")
         await update.message.reply_text(
@@ -41,51 +43,64 @@ async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             user_id, ReplicateService.default_params.copy()
         )
         trigger_word = config.get("trigger_word")
-        num_outputs = config.get("num_outputs", 1)  # Default to 1 if not set
-        style = config.get("style", "professional")
+        num_outputs = config.get("num_outputs", 1)
 
-        # If style is random, choose one for this batch and log it
-        if style == "random":
-            style = style_manager.get_random_style_name()
-            logging.info(f"Random style selected for this batch: {style}")
-            # Inform the user which style was selected
-            await update.message.reply_text(
-                f"🎲 Estilo aleatorio seleccionado: `{style}`", parse_mode="Markdown"
+        # Check if input starts with a number (batch mode)
+        first_word = text.split()[0]
+        if first_word.isdigit():
+            num_prompts = min(int(first_word), 50)  # Limit to 50 prompts max
+            remaining_text = text[len(first_word) :].strip()
+
+            # Check for styles parameter
+            styles = []
+            if remaining_text.startswith("styles="):
+                styles_part = remaining_text.split()[0]
+                styles = styles_part.replace("styles=", "").split(",")
+                # Validate styles
+                available_styles = style_manager.get_available_styles()
+                invalid_styles = [s for s in styles if s not in available_styles]
+                if invalid_styles:
+                    await update.message.reply_text(
+                        f"❌ Estilos inválidos: {', '.join(invalid_styles)}\n"
+                        f"Estilos disponibles: {', '.join(available_styles)}"
+                    )
+                    return
+            else:
+                # Use default style from config
+                styles = [config.get("style", "professional")]
+
+            logging.info(
+                f"Batch mode detected - Requested prompts: {num_prompts}, Styles: {styles}"
             )
-
-        logging.info(
-            f"User config loaded - Trigger Word: {trigger_word}, Num Outputs: {num_outputs}, Style: {style}"
-        )
-
-        # Check if input is a number (batch mode)
-        if text.isdigit():
-            num_prompts = min(int(text), 50)  # Limit to 50 prompts max
-            logging.info(f"Batch mode detected - Requested prompts: {num_prompts}")
             status_message = await update.message.reply_text("⏳ Generando prompts...")
 
-            # Generate prompts using OpenAI
-            logging.info(
-                f"Starting prompt generation for {num_prompts} prompts with style: {style}"
-            )
-            prompts = await generate_prompts(num_prompts, trigger_word, style)
-            if not prompts:
-                logging.error(f"Failed to generate prompts for user {user_id}")
+            # Generate prompts for each style
+            all_prompts = []
+            prompts_per_style = num_prompts // len(styles)
+            remainder = num_prompts % len(styles)
+
+            for style in styles:
+                style_prompts = await generate_prompts(
+                    prompts_per_style + (1 if remainder > 0 else 0), trigger_word, style
+                )
+                if not style_prompts:
+                    logging.error(f"Failed to generate prompts for style {style}")
+                    continue
+                all_prompts.extend(style_prompts)
+                if remainder > 0:
+                    remainder -= 1
+
+            if not all_prompts:
+                logging.error(f"Failed to generate any prompts for user {user_id}")
                 await status_message.edit_text("❌ Error al generar los prompts.")
                 return
 
-            logging.info(f"Successfully generated {len(prompts)} prompts")
-            # Log each prompt's length for debugging
-            for i, prompt in enumerate(prompts):
-                logging.info(f"Prompt {i+1} length: {len(prompt)} characters")
-                logging.info(f"Prompt {i+1} content: {prompt}")
-
             # Update status message
-            await status_message.edit_text(f"⏳ Generando {len(prompts)} imágenes...")
-
-            # Generate images concurrently for each prompt
-            logging.info(
-                f"Starting concurrent image generation for {len(prompts)} images"
+            await status_message.edit_text(
+                f"⏳ Generando {len(all_prompts)} imágenes..."
             )
+
+            # Generate images concurrently
             try:
                 async with asyncio.TaskGroup() as tg:
                     tasks = [
@@ -97,22 +112,17 @@ async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                 operation_type="batch",
                             )
                         )
-                        for prompt in prompts
+                        for prompt in all_prompts
                     ]
-                logging.info(
-                    f"Successfully completed all {len(prompts)} image generations"
-                )
             except ExceptionGroup as e:
                 logging.error(f"Some tasks failed during batch generation: {str(e)}")
-                # Continue to cleanup even if some tasks failed
 
             await status_message.delete()
             logging.info("Batch generation completed successfully")
 
         else:
-            # Single prompt mode - here we DO use num_outputs
+            # Single prompt mode - use num_outputs from config
             prompt = text
-            # Log the full prompt length and content
             logging.info(
                 f"Single prompt mode - Full prompt length: {len(prompt)} characters"
             )
@@ -125,8 +135,6 @@ async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             status_message = await update.message.reply_text(status_text)
 
-            # Generate images concurrently
-            logging.info(f"Starting concurrent generation of {num_outputs} images")
             try:
                 async with asyncio.TaskGroup() as tg:
                     tasks = [
@@ -140,14 +148,10 @@ async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         )
                         for _ in range(num_outputs)
                     ]
-                logging.info(
-                    f"Successfully completed all {num_outputs} image generations"
-                )
             except ExceptionGroup as e:
                 logging.error(
                     f"Some tasks failed during single prompt generation: {str(e)}"
                 )
-                # Continue to cleanup even if some tasks failed
 
             await status_message.delete()
             logging.info("Single prompt generation completed successfully")
