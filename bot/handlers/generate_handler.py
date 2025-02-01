@@ -74,6 +74,10 @@ async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 update, params["num_outputs"], trigger_word, default_style, gender
             )
 
+        elif mode == "invalid":
+            await update.message.reply_text(f"❌ {params['reason']}")
+            return
+
         else:
             await update.message.reply_text("Formato de comando no válido")
 
@@ -88,27 +92,42 @@ def parse_generate_command(
 ) -> tuple[str, dict]:
     text = text.strip()
 
-    # Mode 1: Direct prompt (/generate prompt)
-    if not text[0].isdigit():
-        return "single_prompt", {"prompt": f"{trigger_word} {text}"}
+    # Nuevo caso: styles= sin número primero
+    if text.startswith("styles="):
+        styles_part = text.split("styles=")[1].split()[0]
+        styles = [s.strip() for s in styles_part.split(",")]
+        return "batch_styles", {"num_outputs": 1, "styles": styles}
 
-    # Extract initial number
-    parts = text.split()
-    num_outputs = min(int(parts[0]), 50)
-    remaining = " ".join(parts[1:])
+    # Modificar detección de números para evitar falsos positivos
+    if text and text[0].isdigit():
+        parts = text.split()
+        try:
+            num_outputs = min(int(parts[0]), 50)
+            remaining = " ".join(parts[1:])
+        except ValueError:
+            num_outputs = 1
+            remaining = text
+    else:
+        num_outputs = 1
+        remaining = text
 
-    # Mode 2: Number + direct prompt (/generate 3 prompt)
-    if remaining and not remaining.startswith("styles="):
-        return "batch_direct_prompt", {
-            "num_outputs": num_outputs,
-            "prompt": f"{trigger_word} {remaining}",
-        }
-
-    # Mode 3: With styles (/generate 3 styles=style1,style2)
+    # Validar styles= en cualquier posición después del número
     if "styles=" in remaining:
         styles_part = remaining.split("styles=")[1].split()[0]
         styles = [s.strip() for s in styles_part.split(",")]
+        remaining = remaining.replace(f"styles={styles_part}", "").strip()
+
+        # Si queda texto después de styles=, es parte del prompt
+        if remaining:
+            return "invalid", {
+                "reason": "No se puede mezclar styles= con prompt directo"
+            }
+
         return "batch_styles", {"num_outputs": num_outputs, "styles": styles}
+
+    # Mode 1: Direct prompt (/generate prompt)
+    if not text[0].isdigit():
+        return "single_prompt", {"prompt": f"{trigger_word} {text}"}
 
     # Mode 4: Just number (/generate 3)
     return "batch_default_style", {"num_outputs": num_outputs, "styles": ["random"]}

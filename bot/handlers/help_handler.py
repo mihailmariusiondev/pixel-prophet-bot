@@ -61,6 +61,8 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "`/generate 4 styles=vintage,urban`\n\n"
         "4. Ajustar la calidad de generación:\n"
         "`/config num_inference_steps 40`\n\n"
+        "5. Generar con estilos específicos sin número:\n"
+        "`/generate styles=vintage,cinematic`\n\n"
     )
 
     # Tips section
