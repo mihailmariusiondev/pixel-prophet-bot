@@ -83,6 +83,9 @@ class PromptStyleManager:
             "minimalist": "Clean and minimal style with elegant simplicity",
             "artistic": "Creative and artistic style with unique elements",
             "vintage": "Classic and timeless vintage photography style",
+            "influencer": "Trendy style with a modern influencer aesthetic",
+            "datingprofile": "Charming style tailored for engaging dating profiles",
+            "socialads": "Dynamic style designed for impactful social media advertisements",
         }
 
         # Load each style from its corresponding file
