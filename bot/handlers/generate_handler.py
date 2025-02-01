@@ -43,119 +43,159 @@ async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             user_id, ReplicateService.default_params.copy()
         )
         trigger_word = config.get("trigger_word")
-        num_outputs = config.get("num_outputs", 1)
+        default_style = config.get("style", "professional")
 
-        # Check if input starts with a number (batch mode)
-        first_word = text.split()[0]
-        if first_word.isdigit():
-            num_prompts = min(int(first_word), 50)  # Limit to 50 prompts max
-            remaining_text = text[len(first_word) :].strip()
+        # Parse command
+        mode, params = parse_generate_command(text, trigger_word, default_style)
 
-            # Check for styles parameter
-            styles = []
-            if remaining_text.startswith("styles="):
-                styles_part = remaining_text.split()[0]
-                styles = styles_part.replace("styles=", "").split(",")
-                # Validate styles
-                available_styles = style_manager.get_available_styles()
-                invalid_styles = [s for s in styles if s not in available_styles]
-                if invalid_styles:
-                    await update.message.reply_text(
-                        f"❌ Estilos inválidos: {', '.join(invalid_styles)}\n"
-                        f"Estilos disponibles: {', '.join(available_styles)}"
-                    )
-                    return
-            else:
-                # Use default style from config
-                styles = [config.get("style", "professional")]
-
-            logging.info(
-                f"Batch mode detected - Requested prompts: {num_prompts}, Styles: {styles}"
-            )
-            status_message = await update.message.reply_text("⏳ Generando prompts...")
-
-            # Generate prompts for each style
-            all_prompts = []
-            prompts_per_style = num_prompts // len(styles)
-            remainder = num_prompts % len(styles)
-
-            for style in styles:
-                style_prompts = await generate_prompts(
-                    prompts_per_style + (1 if remainder > 0 else 0), trigger_word, style
-                )
-                if not style_prompts:
-                    logging.error(f"Failed to generate prompts for style {style}")
-                    continue
-                all_prompts.extend(style_prompts)
-                if remainder > 0:
-                    remainder -= 1
-
-            if not all_prompts:
-                logging.error(f"Failed to generate any prompts for user {user_id}")
-                await status_message.edit_text("❌ Error al generar los prompts.")
-                return
-
-            # Update status message
-            await status_message.edit_text(
-                f"⏳ Generando {len(all_prompts)} imágenes..."
+        # Handle based on mode
+        if mode == "single_prompt":
+            await handle_single_prompt(
+                update, params["prompt"], config.get("num_outputs", 1)
             )
 
-            # Generate images concurrently
-            try:
-                async with asyncio.TaskGroup() as tg:
-                    tasks = [
-                        tg.create_task(
-                            ReplicateService.generate_image(
-                                prompt,
-                                user_id=user_id,
-                                message=update.message,
-                                operation_type="batch",
-                            )
-                        )
-                        for prompt in all_prompts
-                    ]
-            except ExceptionGroup as e:
-                logging.error(f"Some tasks failed during batch generation: {str(e)}")
+        elif mode == "batch_direct_prompt":
+            await handle_batch_direct_prompt(
+                update, params["prompt"], params["num_outputs"]
+            )
 
-            await status_message.delete()
-            logging.info("Batch generation completed successfully")
+        elif mode == "batch_styles":
+            await handle_batch_styles(
+                update,
+                params["num_outputs"],
+                params["styles"],
+                trigger_word,
+                config.get("gender", "male"),
+            )
+
+        elif mode == "batch_default_style":
+            gender = config.get("gender", "male")
+            await handle_batch_default_style(
+                update, params["num_outputs"], trigger_word, default_style, gender
+            )
 
         else:
-            # Single prompt mode - use num_outputs from config
-            prompt = text
-            logging.info(
-                f"Single prompt mode - Full prompt length: {len(prompt)} characters"
-            )
-            logging.info(f"Single prompt mode - Full prompt content: {prompt}")
-
-            status_text = (
-                "⏳ Generando imagen..."
-                if num_outputs == 1
-                else f"⏳ Generando {num_outputs} imágenes..."
-            )
-            status_message = await update.message.reply_text(status_text)
-
-            try:
-                async with asyncio.TaskGroup() as tg:
-                    tasks = [
-                        tg.create_task(
-                            ReplicateService.generate_image(
-                                prompt,
-                                user_id=user_id,
-                                message=update.message,
-                                operation_type="single",
-                            )
-                        )
-                        for _ in range(num_outputs)
-                    ]
-            except ExceptionGroup as e:
-                logging.error(
-                    f"Some tasks failed during single prompt generation: {str(e)}"
-                )
-
-            await status_message.delete()
-            logging.info("Single prompt generation completed successfully")
+            await update.message.reply_text("Formato de comando no válido")
 
     except Exception as e:
         logging.error(f"Error in generate handler: {str(e)}", exc_info=True)
         await update.message.reply_text("❌ Ha ocurrido un error inesperado.")
+
+
+# Helper functions
+def parse_generate_command(
+    text: str, trigger_word: str, default_style: str
+) -> tuple[str, dict]:
+    text = text.strip()
+
+    # Mode 1: Direct prompt (/generate prompt)
+    if not text[0].isdigit():
+        return "single_prompt", {"prompt": f"{trigger_word} {text}"}
+
+    # Extract initial number
+    parts = text.split()
+    num_outputs = min(int(parts[0]), 50)
+    remaining = " ".join(parts[1:])
+
+    # Mode 2: Number + direct prompt (/generate 3 prompt)
+    if remaining and not remaining.startswith("styles="):
+        return "batch_direct_prompt", {
+            "num_outputs": num_outputs,
+            "prompt": f"{trigger_word} {remaining}",
+        }
+
+    # Mode 3: With styles (/generate 3 styles=style1,style2)
+    if "styles=" in remaining:
+        styles_part = remaining.split("styles=")[1].split()[0]
+        styles = [s.strip() for s in styles_part.split(",")]
+        return "batch_styles", {"num_outputs": num_outputs, "styles": styles}
+
+    # Mode 4: Just number (/generate 3)
+    return "batch_default_style", {"num_outputs": num_outputs, "styles": ["random"]}
+
+
+async def handle_single_prompt(update: Update, prompt: str, num_outputs: int):
+    status = await update.message.reply_text(f"⏳ Generando {num_outputs} imágenes...")
+
+    try:
+        async with asyncio.TaskGroup() as tg:
+            [
+                tg.create_task(
+                    ReplicateService.generate_image(
+                        prompt,
+                        user_id=update.effective_user.id,
+                        message=update.message,
+                        operation_type="single",
+                    )
+                )
+                for _ in range(num_outputs)
+            ]
+    except ExceptionGroup as e:
+        logging.error(f"Error en generación simple: {str(e)}")
+
+    await status.delete()
+
+
+async def handle_batch_direct_prompt(update: Update, prompt: str, num_outputs: int):
+    status = await update.message.reply_text(f"⏳ Generando {num_outputs} imágenes...")
+
+    try:
+        async with asyncio.TaskGroup() as tg:
+            [
+                tg.create_task(
+                    ReplicateService.generate_image(
+                        prompt,
+                        user_id=update.effective_user.id,
+                        message=update.message,
+                        operation_type="batch",
+                    )
+                )
+                for _ in range(num_outputs)
+            ]
+    except ExceptionGroup as e:
+        logging.error(f"Error en batch directo: {str(e)}")
+
+    await status.delete()
+
+
+async def handle_batch_styles(
+    update: Update, num_outputs: int, styles: list, trigger_word: str, gender: str
+):
+    # Validate styles
+    available_styles = style_manager.get_available_styles()
+    if invalid := [s for s in styles if s not in available_styles]:
+        await update.message.reply_text(f"❌ Estilos inválidos: {', '.join(invalid)}")
+        return
+
+    # Generate prompts
+    status = await update.message.reply_text("⏳ Generando prompts...")
+    prompts = await generate_prompts(
+        num_outputs, trigger_word, style=styles[0], gender=gender
+    )
+
+    # Generate images
+    await status.edit_text(f"⏳ Generando {len(prompts)} imágenes...")
+
+    try:
+        async with asyncio.TaskGroup() as tg:
+            [
+                tg.create_task(
+                    ReplicateService.generate_image(
+                        p,
+                        user_id=update.effective_user.id,
+                        message=update.message,
+                        operation_type="batch",
+                    )
+                )
+                for p in prompts
+            ]
+    except ExceptionGroup as e:
+        logging.error(f"Error en batch con estilos: {str(e)}")
+
+    await status.delete()
+
+
+async def handle_batch_default_style(
+    update: Update, num_outputs: int, trigger_word: str, default_style: str, gender: str
+):
+    await handle_batch_styles(update, num_outputs, ["random"], trigger_word, gender)
