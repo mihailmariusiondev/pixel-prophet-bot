@@ -83,47 +83,45 @@ async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     except Exception as e:
         logging.error(f"Error in generate handler: {str(e)}", exc_info=True)
-        await update.message.reply_text("❌ Ha ocurrido un error inesperado.")
+        error_messages = {
+            "invalid_style": "❌ Estilo no válido. Usa /help para ver la lista",
+            "mixed_formats": "❌ No mezcles prompt directo con styles=",
+            "max_limit": "❌ Máximo 50 imágenes por comando",
+            "style_syntax": "❌ Formato incorrecto para styles. Usa styles=estilo1,estilo2",
+        }
+        await update.message.reply_text(
+            error_messages.get(str(e), "❌ Error desconocido")
+        )
 
 
 # Helper functions
 def parse_generate_command(
     text: str, trigger_word: str, default_style: str
 ) -> tuple[str, dict]:
-    text = text.strip()
+    text = text.strip().lower()
 
-    # Nuevo caso: styles= sin número primero
-    if text.startswith("styles="):
-        styles_part = text.split("styles=")[1].split()[0]
-        styles = [s.strip() for s in styles_part.split(",")]
-        return "batch_styles", {"num_outputs": 1, "styles": styles}
+    num_outputs = 1
+    remaining = text
 
-    # Modificar detección de números para evitar falsos positivos
+    # Extraer número si existe
     if text and text[0].isdigit():
-        parts = text.split()
+        parts = text.split(maxsplit=1)
         try:
             num_outputs = min(int(parts[0]), 50)
-            remaining = " ".join(parts[1:])
+            remaining = parts[1] if len(parts) > 1 else ""
         except ValueError:
-            num_outputs = 1
             remaining = text
-    else:
-        num_outputs = 1
-        remaining = text
 
-    # Validar styles= en cualquier posición después del número
+    # Manejar styles= en cualquier posición
     if "styles=" in remaining:
-        styles_part = remaining.split("styles=")[1].split()[0]
-        styles = [s.strip() for s in styles_part.split(",")]
+        styles_part = remaining.split("styles=")[-1].split()[0]
+        styles = [s.strip() for s in styles_part.split(",") if s.strip()]
         remaining = remaining.replace(f"styles={styles_part}", "").strip()
 
-        # Si queda texto después de styles=, es parte del prompt
-        if remaining:
-            return "invalid", {
-                "reason": "No se puede mezclar styles= con prompt directo"
-            }
-
-        return "batch_styles", {"num_outputs": num_outputs, "styles": styles}
+        if styles:
+            # Validar máximo 3 estilos
+            styles = styles[:3]
+            return "batch_styles", {"num_outputs": num_outputs, "styles": styles}
 
     # Mode 1: Direct prompt (/generate prompt)
     if not text[0].isdigit():
@@ -180,38 +178,89 @@ async def handle_batch_direct_prompt(update: Update, prompt: str, num_outputs: i
 async def handle_batch_styles(
     update: Update, num_outputs: int, styles: list, trigger_word: str, gender: str
 ):
-    # Validate styles
-    available_styles = style_manager.get_available_styles()
-    if invalid := [s for s in styles if s not in available_styles]:
-        await update.message.reply_text(f"❌ Estilos inválidos: {', '.join(invalid)}")
-        return
+    user_id = update.effective_user.id
+    logging.info(f"[User {user_id}] Iniciando generación con estilos: {styles}")
 
-    # Generate prompts
-    status = await update.message.reply_text("⏳ Generando prompts...")
-    prompts = await generate_prompts(
-        num_outputs, trigger_word, style=styles[0], gender=gender
+    # Validar estilos y eliminar duplicados
+    available_styles = style_manager.get_available_styles()
+    valid_styles = [s for s in styles if s in available_styles][:3]
+
+    logging.debug(
+        f"[User {user_id}] Estilos recibidos: {styles} | Válidos: {valid_styles}"
     )
 
-    # Generate images
-    await status.edit_text(f"⏳ Generando {len(prompts)} imágenes...")
+    if not valid_styles:
+        logging.warning(
+            f"[User {user_id}] No se encontraron estilos válidos en: {styles}"
+        )
+        await update.message.reply_text("❌ Ningún estilo válido encontrado")
+        return
+
+    # Calcular imágenes por estilo
+    images_per_style = max(1, num_outputs // len(valid_styles))
+    total_images = images_per_style * len(valid_styles)
+
+    logging.info(
+        f"[User {user_id}] Configuración final: "
+        f"{len(valid_styles)} estilos x {images_per_style} imágenes = {total_images} total"
+    )
+
+    status = await update.message.reply_text(
+        f"⏳ Generando {total_images} imágenes ({len(valid_styles)} estilos)..."
+    )
 
     try:
         async with asyncio.TaskGroup() as tg:
-            [
-                tg.create_task(
-                    ReplicateService.generate_image(
-                        p,
-                        user_id=update.effective_user.id,
-                        message=update.message,
-                        operation_type="batch",
-                    )
+            for style in valid_styles:
+                logging.debug(f"[User {user_id}] Procesando estilo: {style}")
+
+                # Generar prompts para cada estilo
+                logging.info(
+                    f"[User {user_id}] Generando {images_per_style} prompts para estilo: {style}"
                 )
-                for p in prompts
-            ]
+                prompts = await generate_prompts(
+                    images_per_style, trigger_word, style=style, gender=gender
+                )
+
+                logging.debug(
+                    f"[User {user_id}] Prompts generados para {style}: {len(prompts)}"
+                )
+                if prompts:
+                    logging.debug(
+                        f"[User {user_id}] Ejemplo de prompt ({style}): {prompts[0][:100]}..."
+                    )
+
+                # Crear tareas para cada prompt
+                logging.info(
+                    f"[User {user_id}] Creando {len(prompts)} tareas de generación para {style}"
+                )
+                [
+                    tg.create_task(
+                        ReplicateService.generate_image(
+                            p,
+                            user_id=user_id,
+                            message=update.message,
+                            operation_type="batch",
+                        )
+                    )
+                    for p in prompts
+                ]
+
+            logging.info(
+                f"[User {user_id}] Total de tareas creadas: "
+                f"{len(valid_styles) * images_per_style}"
+            )
+
     except ExceptionGroup as e:
-        logging.error(f"Error en batch con estilos: {str(e)}")
+        logging.error(
+            f"[User {user_id}] Error en generación por estilos: {str(e)}", exc_info=True
+        )
+        await update.message.reply_text("⚠️ Algunas imágenes fallaron en la generación")
 
     await status.delete()
+    logging.info(
+        f"[User {user_id}] Generación completada - {total_images} imágenes procesadas"
+    )
 
 
 async def handle_batch_default_style(

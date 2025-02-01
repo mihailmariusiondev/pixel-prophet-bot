@@ -9,41 +9,48 @@ def setup_logging():
     for handler in root.handlers[:]:
         root.removeHandler(handler)
 
-    # Set the logging level to INFO
-    root.setLevel(logging.INFO)
+    # Configuración básica
+    log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+    log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    date_format = "%Y-%m-%d %H:%M:%S"
 
-    # Define the directory for log files
+    # Niveles disponibles
+    valid_levels = {
+        "DEBUG": logging.DEBUG,
+        "INFO": logging.INFO,
+        "WARNING": logging.WARNING,
+        "ERROR": logging.ERROR,
+        "CRITICAL": logging.CRITICAL,
+    }
+
+    # Verificar y establecer nivel
+    level = valid_levels.get(log_level, logging.INFO)
+    root.setLevel(level)
+
+    # Configurar directorio de logs
     log_dir = "logs"
-    # Create the log directory if it doesn't exist
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
-    # Create a rotating file handler
+    # Configurar handler de archivo rotativo
     file_handler = RotatingFileHandler(
         os.path.join(log_dir, "bot.log"),
-        maxBytes=10 * 1024 * 1024,
+        maxBytes=10 * 1024 * 1024,  # 10 MB
         backupCount=5,
         encoding="utf-8",
     )
-    file_handler.setLevel(logging.INFO)
+    file_handler.setLevel(level)
+    file_handler.setFormatter(logging.Formatter(log_format, datefmt=date_format))
 
-    # Create a console handler
+    # Configurar handler de consola
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
+    console_handler.setLevel(level)
+    console_handler.setFormatter(logging.Formatter(log_format, datefmt=date_format))
 
-    # Define the log message format
-    formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-
-    # Set the formatter for both handlers
-    file_handler.setFormatter(formatter)
-    console_handler.setFormatter(formatter)
-
-    # Add both handlers to the logger
+    # Añadir handlers
     root.addHandler(file_handler)
     root.addHandler(console_handler)
 
-    # Test log
-    logging.info("Logging setup completed")
+    # Log de prueba
+    logging.info("Configuración de logging completada")
+    logging.debug(f"Nivel de log configurado: {log_level}")

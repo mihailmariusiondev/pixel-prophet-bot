@@ -21,11 +21,11 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     commands_help = (
         "🤖 *Comandos disponibles:*\n\n"
         "• `/generate [prompt]` - Genera imágenes a partir de un prompt\n"
-        "• `/generate [número]` - Genera múltiples imágenes con prompts aleatorios\n"
-        "• `/generate [número] styles=estilo1,estilo2` - Genera imágenes con estilos específicos\n"
-        "• `/config` - Muestra la configuración actual\n"
-        "• `/config [param] [valor]` - Modifica un parámetro de configuración\n"
-        "• `/help` - Muestra este mensaje de ayuda\n\n"
+        "• `/generate [número]` - Genera múltiples imágenes con estilo aleatorio\n"
+        "• `/generate [número] styles=estilo1,estilo2` - Combina estilos para generación\n"
+        "• `/generate styles=estilo` - Genera con estilo específico sin número\n"
+        "• `/generate [número] [prompt]` - Genera múltiples variaciones de un prompt\n"
+        "• `/generate [prompt] styles=estilo` - Combina prompt con estilo específico\n\n"
     )
 
     # Configuration parameters section
@@ -45,24 +45,27 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Styles section
     available_styles = style_manager.get_available_styles()
     styles_help = (
-        "🎨 *Estilos disponibles:*\n\n"
-        f"• {', '.join(f'`{style}`' for style in available_styles if style != 'random')}\n"
-        "• `random` - Selecciona un estilo aleatorio\n\n"
+        "🎨 *Uso avanzado de estilos:*\n\n"
+        "• Combina hasta 3 estilos con comas\n"
+        "• Mezcla estilos base con modificadores:\n"
+        "  `styles=professional,cinematic-light`\n"
+        "• Usa `random` para selección aleatoria\n"
+        "• Prioridad de estilos: el primero tiene mayor peso\n\n"
     )
 
     # Examples section
     examples = (
-        "📝 *Ejemplos:*\n\n"
-        "1. Generar una imagen con un prompt:\n"
-        "`/generate ESTEVE un hombre sentado en un café, mirando pensativamente por la ventana`\n\n"
-        "2. Generar 3 imágenes con prompts aleatorios:\n"
-        "`/generate 3`\n\n"
-        "3. Generar 4 imágenes con estilos específicos:\n"
-        "`/generate 4 styles=vintage,urban`\n\n"
-        "4. Ajustar la calidad de generación:\n"
-        "`/config num_inference_steps 40`\n\n"
-        "5. Generar con estilos específicos sin número:\n"
-        "`/generate styles=vintage,cinematic`\n\n"
+        "📝 *Ejemplos avanzados:*\n\n"
+        "1. Un estilo por imagen:\n"
+        "`/generate styles=vintage,urban` → 2 imágenes\n\n"
+        "2. Múltiples imágenes por estilo:\n"
+        "`/generate 6 styles=cinematic,professional` → 3 de cada\n\n"
+        "3. Combinación con prompt personalizado:\n"
+        "`/generate ESTEVE retrato en la ciudad styles=urban`\n\n"
+        "4. Generación múltiple con prompt:\n"
+        "`/generate 5 un hombre mirando al horizonte`\n\n"
+        "5. Uso de estilos sin número:\n"
+        "`/generate styles=professional,influencer`\n\n"
     )
 
     # Tips section
@@ -75,8 +78,18 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• Puedes combinar múltiples estilos en una sola generación\n"
     )
 
+    # Edge cases section
+    edge_cases = (
+        "⚠️ *Casos especiales:*\n\n"
+        "• Mayúsculas: `styles=PROFESSIONAL` se convierte a minúscula\n"
+        "• Estilos inválidos: se ignoran silenciosamente\n"
+        "• Números mayores a 50: se limitan automáticamente\n"
+        "• Mezcla de formatos: `/generate 3 prompt styles=estilo` es inválido\n"
+        "• Sin espacios: `styles= estilo` puede causar errores\n"
+    )
+
     # Combine all sections
-    full_help = f"{commands_help}{config_help}{styles_help}{examples}{tips}"
+    full_help = f"{commands_help}{config_help}{styles_help}{examples}{tips}{edge_cases}"
 
     # Send help message
     await update.message.reply_text(
