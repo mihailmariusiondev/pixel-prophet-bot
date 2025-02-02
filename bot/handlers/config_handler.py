@@ -25,12 +25,6 @@ ALLOWED_PARAMS = {
         "max_length": 200,
         "description": "Endpoint del modelo para generación de imágenes",
     },
-    "num_outputs": {
-        "type": "int",
-        "min": 1,
-        "max": 5,
-        "description": "Número de imágenes a generar por prompt",
-    },
     "num_inference_steps": {
         "type": "int",
         "min": 1,
@@ -79,7 +73,6 @@ async def config_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "gender",
             "trigger_word",
             "model_endpoint",
-            "num_outputs",
             "num_inference_steps",
             "guidance_scale",
             "prompt_strength",

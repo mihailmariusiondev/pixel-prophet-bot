@@ -121,14 +121,8 @@ class PromptStyleManager:
         return random.choice(list(self.styles.keys()))
 
     def get_available_styles(self) -> List[str]:
-        """Get list of available style names con ejemplos de combinaciones"""
-        base_styles = list(self.styles.keys())
-        combinations = [
-            "professional+cinematic",
-            "urban+vintage",
-            "minimalist+artistic",
-        ]
-        return base_styles + combinations + ["random"]
+        """Get lista de estilos base disponibles"""
+        return list(self.styles.keys()) + ["random"]
 
 
 # Initialize the style manager as a global singleton

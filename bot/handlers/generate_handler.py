@@ -108,18 +108,14 @@ def parse_generate_command(
     # Manejar styles=
     if "styles=" in remaining:
         styles_part = remaining.split("styles=")[-1].split()[0]
-        styles = [s.strip() for s in styles_part.split(",") if s.strip()]
+        styles = [s.strip().lower() for s in styles_part.split(",") if s.strip()]
         remaining = remaining.replace(f"styles={styles_part}", "").strip()
 
-        if remaining:  # Si queda texto después de styles= es un prompt
+        if remaining:
             return "invalid", {
                 "reason": "❌ No puedes mezclar estilos con un prompt directo"
             }
 
-        if not styles:
-            return "invalid", {"reason": "❌ Formato incorrecto para styles"}
-
-        styles = styles[:3]
         return "batch_styles", {"num_outputs": num_outputs, "styles": styles}
 
     # Modo batch con prompt directo
@@ -163,7 +159,7 @@ async def handle_batch_styles(
 
     # Validar estilos y eliminar duplicados
     available_styles = style_manager.get_available_styles()
-    valid_styles = list({s for s in styles if s in available_styles})[:3]
+    valid_styles = list({s for s in styles if s in available_styles})
 
     logging.debug(
         f"[User {user_id}] Estilos recibidos: {styles} | Válidos: {valid_styles}"

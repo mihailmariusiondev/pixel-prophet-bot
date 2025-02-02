@@ -19,7 +19,6 @@ class ReplicateService:
         "seed": -1,  # Default seed value, will be randomized during generation
         "model": "dev",  # Model version
         "lora_scale": 1,  # LoRA adaptation strength
-        "num_outputs": 1,  # Default to single image generation
         "aspect_ratio": "4:5",  # Standard Instagram ratio
         "output_format": "jpg",  # Compressed format for efficiency
         "guidance_scale": 0,  # How closely to follow the prompt
