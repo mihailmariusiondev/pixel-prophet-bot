@@ -11,91 +11,148 @@ from ..handlers.config_handler import ALLOWED_PARAMS
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Handle the /help command.
-    Shows detailed usage information, commands, and configuration options.
+    Shows comprehensive usage information, commands, configurations, and features.
     """
     user_id = update.effective_user.id
     username = update.effective_user.username or "Unknown"
     logging.info(f"Help command received - User: {user_id} ({username})")
 
-    # Dividir el mensaje en partes más pequeñas para evitar problemas con el formato
     messages = []
 
-    # Comandos principales
+    # 1. Introduction and Basic Commands
     messages.append(
-        "🤖 *Comandos Principales:*\n"
-        "• /start - Inicia el bot y muestra mensaje de bienvenida\n"
-        "• /help - Muestra este mensaje de ayuda\n"
+        "🤖 *PixelProphetBot - Guía Completa*\n\n"
+        "*Comandos Principales:*\n"
+        "• /start - Inicia el bot y configura los parámetros esenciales\n"
+        "• /help - Muestra esta guía detallada\n"
         "• /about - Información sobre el bot y su creador\n"
         "• /config - Ver o modificar la configuración\n"
-        "• /generate - Genera imágenes (ver formatos abajo)\n"
+        "• /generate - Genera imágenes (múltiples formatos)\n"
     )
 
-    # Formatos de generación
+    # 2.1 Valid and Invalid Command Combinations
     messages.append(
-        "📸 *Formatos de /generate:*\n\n"
-        "*1. Prompt Directo:*\n"
-        "• /generate [número] [prompt]\n"
-        "Ejemplo: /generate 4 retrato en un café\n\n"
-        "*2. Estilos Específicos:*\n"
-        "• /generate [número] styles=estilo1,estilo2\n"
-        "Ejemplo: /generate 3 styles=cinematic,urban\n\n"
-        "*3. Estilo por Defecto:*\n"
-        "• /generate [número]\n"
-        "Ejemplo: /generate 5\n\n"
-        "*4. Un Solo Estilo:*\n"
-        "• /generate styles=estilo\n"
-        "Ejemplo: /generate styles=vintage"
+        "⚡ *Combinaciones del Comando /generate:*\n\n"
+        "*Combinaciones Válidas:*\n"
+        "• `/generate 3` - Genera 3 imágenes con estilo por defecto\n"
+        "• `/generate 5 un retrato en la playa` - Genera 5 imágenes con prompt directo\n"
+        "• `/generate styles=cinematic` - Una imagen con estilo cinematográfico\n"
+        "• `/generate 4 styles=urban,vintage` - 4 imágenes combinando estilos\n"
+        "• `/generate styles=random` - Una imagen con estilo aleatorio\n\n"
+        "*Combinaciones Inválidas:*\n"
+        "• `/generate styles=urban un retrato` ❌ - No mezclar styles con prompt\n"
+        "• `/generate 51` ❌ - Máximo 50 imágenes\n"
+        "• `/generate 0` ❌ - Mínimo 1 imagen\n"
+        "• `/generate styles=invalid` ❌ - Estilo no existente\n"
+        "• `/generate styles=urban,` ❌ - Coma al final\n\n"
+        "💡 *Tips:*\n"
+        "• Los estilos inválidos en una lista se ignoran\n"
+        "• El orden de los estilos no afecta el resultado\n"
+        "• Puedes usar mayúsculas o minúsculas en los estilos"
     )
 
-    # Estilos disponibles
+    # 2. Generate Command Formats
     messages.append(
-        "🎨 *Estilos Disponibles:*\n"
-        "• professional - Formal y elegante\n"
-        "• casual - Estilo casual y auténtico\n"
-        "• cinematic - Estilo cinematográfico\n"
-        "• urban - Fotografía urbana\n"
-        "• minimalist - Minimalista y limpio\n"
-        "• vintage - Clásico y retro\n"
-        "• influencer - Estilo redes sociales\n"
-        "• socialads - Anuncios sociales\n"
-        "• datingprofile - Perfil de citas\n"
-        "• random - Estilo aleatorio"
+        "🎨 *Formatos del Comando /generate:*\n\n"
+        "*1. Generación Simple:*\n"
+        "• `/generate [número] [prompt]`\n"
+        "Ejemplo: `/generate 4 retrato en un café`\n\n"
+        "*2. Generación con Estilos:*\n"
+        "• `/generate [número] styles=estilo1,estilo2`\n"
+        "Ejemplo: `/generate 3 styles=cinematic,urban`\n\n"
+        "*3. Generación con Estilo por Defecto:*\n"
+        "• `/generate [número]`\n"
+        "Ejemplo: `/generate 5`\n\n"
+        "*4. Generación con Estilo Único:*\n"
+        "• `/generate styles=estilo`\n"
+        "Ejemplo: `/generate styles=vintage`\n\n"
+        "💡 El número máximo de imágenes por comando es 50"
     )
 
-    # Configuración
+    # 3. Available Styles with Descriptions
     messages.append(
-        "⚙️ *Configuración:*\n"
-        "• Ver configuración actual: /config\n"
-        "• Modificar parámetro: /config [parámetro] [valor]\n\n"
-        "*Parámetros Principales:*\n"
-        "• trigger_word - Palabra clave para prompts\n"
-        "• model_endpoint - Endpoint del modelo\n"
-        "• gender - Género (male/female)\n"
-        "• guidance_scale - Control de prompt (0-10)\n"
-        "• prompt_strength - Balance prompt/imagen (0-1)\n"
-        "• num_inference_steps - Calidad/velocidad (1-50)"
+        "🎭 *Estilos Disponibles:*\n\n"
+        "• *professional* - Formal y elegante, ideal para retratos profesionales\n"
+        "• *casual* - Estilo natural y auténtico tipo smartphone\n"
+        "• *cinematic* - Dramático y cinematográfico, como escenas de película\n"
+        "• *urban* - Fotografía urbana y callejera con energía citadina\n"
+        "• *minimalist* - Limpio y minimalista con elegante simplicidad\n"
+        "• *vintage* - Clásico y retro con efectos de época\n"
+        "• *influencer* - Moderno y trendy para redes sociales\n"
+        "• *socialads* - Optimizado para anuncios en redes sociales\n"
+        "• *datingprofile* - Ideal para fotos de perfil en apps de citas\n"
+        "• *random* - Selecciona un estilo al azar\n\n"
+        "💡 Puedes combinar múltiples estilos usando comas"
     )
 
-    # Notas importantes
+    # 4. Configuration Parameters
+    config_text = "*⚙️ Parámetros de Configuración:*\n\n"
+    for param, details in ALLOWED_PARAMS.items():
+        config_text += f"• *{param}*\n"
+        config_text += f"  - {details['description']}\n"
+        if "allowed_values" in details:
+            config_text += (
+                f"  - Valores permitidos: {', '.join(details['allowed_values'])}\n"
+            )
+        elif details["type"] in ["int", "float"]:
+            config_text += f"  - Rango: {details['min']} a {details['max']}\n"
+        config_text += "\n"
+    messages.append(config_text)
+
+    # 5. Image Analysis Feature
     messages.append(
-        "💡 *Notas Importantes:*\n"
-        "• Máximo 50 imágenes por comando\n"
-        "• Total imágenes = número × estilos seleccionados\n"
-        "• No mezclar prompt directo con styles=\n"
-        "• Configurar trigger_word y model_endpoint antes de usar\n"
-        "• Los estilos inválidos se ignoran\n"
-        "• El trigger_word se añade automáticamente"
+        "📸 *Análisis de Imágenes:*\n\n"
+        "Envía una imagen al bot para:\n"
+        "1. Recibir un análisis detallado de la imagen\n"
+        "2. Generar una imagen similar basada en el análisis\n"
+        "3. Mantener el estilo y elementos clave de la imagen original\n\n"
+        "💡 Las imágenes generadas respetarán tu configuración actual"
     )
 
-    # Enviar cada sección como un mensaje separado
-    for message in messages:
+    # 6. Configuration Instructions
+    messages.append(
+        "🔧 *Uso de la Configuración:*\n\n"
+        "*Ver configuración actual:*\n"
+        "• `/config`\n\n"
+        "*Modificar un parámetro:*\n"
+        "• `/config [parámetro] [valor]`\n\n"
+        "Ejemplos:\n"
+        "• `/config gender male`\n"
+        "• `/config trigger_word MARIUS`\n"
+        "• `/config guidance_scale 7.5`\n\n"
+        "💡 Algunos parámetros son obligatorios para usar el bot"
+    )
+
+    # 7. Important Notes and Tips (updated)
+    messages.append(
+        "📝 *Notas Importantes:*\n\n"
+        "• El trigger_word se añade automáticamente a todos los prompts\n"
+        "• Las imágenes generadas tienen una relación de aspecto 4:5\n"
+        "• Los rostros siempre son visibles pero no miran directamente a la cámara\n"
+        "• La calidad de la imagen depende del num_inference_steps\n"
+        "• El guidance_scale controla qué tan cerca sigue el prompt\n"
+        "• El prompt_strength balancea entre el prompt y la imagen original\n"
+        "• Total de imágenes = número × cantidad de estilos seleccionados\n\n"
+        "⚠️ *Restricciones:*\n"
+        "• No se permiten escenarios sin camisa o estados de desnudez\n"
+        "• No se especifica edad en los prompts\n"
+        "• Se evitan contextos deportivos y de gimnasio\n"
+        "• No se permiten movimientos (caminar, cruzar, etc.)\n"
+        "• Los prompts son puramente descriptivos, sin títulos"
+    )
+
+    # Send each section as a separate message with better error handling
+    for i, message in enumerate(messages, 1):
         try:
             await update.message.reply_text(
                 message, parse_mode="Markdown", disable_web_page_preview=True
             )
         except Exception as e:
-            logging.error(f"Error sending help message: {str(e)}")
-            await update.message.reply_text(
-                "❌ Error al mostrar la ayuda. Por favor, contacta al administrador."
-            )
-            break
+            logging.error(f"Error sending help message section {i}: {str(e)}")
+            # Only send error message if it's the first failed message
+            if i == 1:
+                await update.message.reply_text(
+                    "❌ Error al mostrar la ayuda. Por favor, intenta de nuevo más tarde o contacta al administrador."
+                )
+            # Continue sending remaining messages even if one fails
+            continue
