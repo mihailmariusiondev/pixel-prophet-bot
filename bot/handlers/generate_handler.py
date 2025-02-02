@@ -49,16 +49,10 @@ async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         mode, params = parse_generate_command(text, trigger_word, default_style)
 
         # Handle based on mode
-        if mode == "single_prompt":
-            await handle_single_prompt(
-                update, params["prompt"], config.get("num_outputs", 1)
-            )
-
-        elif mode == "batch_direct_prompt":
+        if mode == "batch_direct_prompt":
             await handle_batch_direct_prompt(
                 update, params["prompt"], params["num_outputs"]
             )
-
         elif mode == "batch_styles":
             await handle_batch_styles(
                 update,
@@ -67,19 +61,14 @@ async def generate_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 trigger_word,
                 config.get("gender", "male"),
             )
-
         elif mode == "batch_default_style":
             gender = config.get("gender", "male")
             await handle_batch_default_style(
                 update, params["num_outputs"], trigger_word, default_style, gender
             )
-
         elif mode == "invalid":
-            await update.message.reply_text(f"❌ {params['reason']}")
+            await update.message.reply_text(f"{params['reason']}")
             return
-
-        else:
-            await update.message.reply_text("Formato de comando no válido")
 
     except Exception as e:
         logging.error(f"Error in generate handler: {str(e)}", exc_info=True)
@@ -100,57 +89,48 @@ def parse_generate_command(
 ) -> tuple[str, dict]:
     text = text.strip().lower()
 
-    num_outputs = 1
-    remaining = text
+    if not text:
+        return "invalid", {
+            "reason": "❌ Formato inválido. Debes especificar un número al inicio"
+        }
 
-    # Extraer número si existe
-    if text and text[0].isdigit():
-        parts = text.split(maxsplit=1)
-        try:
-            num_outputs = min(int(parts[0]), 50)
-            remaining = parts[1] if len(parts) > 1 else ""
-        except ValueError:
-            remaining = text
+    # Extraer número obligatorio
+    parts = text.split(maxsplit=1)
+    if not parts[0].isdigit():
+        return "invalid", {"reason": "❌ Debes especificar un número al inicio"}
 
-    # Manejar styles= en cualquier posición
+    try:
+        num_outputs = min(int(parts[0]), 50)
+        remaining = parts[1] if len(parts) > 1 else ""
+    except ValueError:
+        return "invalid", {"reason": "❌ Número inválido"}
+
+    # Manejar styles=
     if "styles=" in remaining:
         styles_part = remaining.split("styles=")[-1].split()[0]
         styles = [s.strip() for s in styles_part.split(",") if s.strip()]
         remaining = remaining.replace(f"styles={styles_part}", "").strip()
 
-        if styles:
-            # Validar máximo 3 estilos
-            styles = styles[:3]
-            return "batch_styles", {"num_outputs": num_outputs, "styles": styles}
+        if remaining:  # Si queda texto después de styles= es un prompt
+            return "invalid", {
+                "reason": "❌ No puedes mezclar estilos con un prompt directo"
+            }
 
-    # Mode 1: Direct prompt (/generate prompt)
-    if not text[0].isdigit():
-        return "single_prompt", {"prompt": f"{trigger_word} {text}"}
+        if not styles:
+            return "invalid", {"reason": "❌ Formato incorrecto para styles"}
 
-    # Mode 4: Just number (/generate 3)
+        styles = styles[:3]
+        return "batch_styles", {"num_outputs": num_outputs, "styles": styles}
+
+    # Modo batch con prompt directo
+    if remaining:
+        return "batch_direct_prompt", {
+            "num_outputs": num_outputs,
+            "prompt": f"{trigger_word} {remaining}",
+        }
+
+    # Modo estilo por defecto
     return "batch_default_style", {"num_outputs": num_outputs, "styles": ["random"]}
-
-
-async def handle_single_prompt(update: Update, prompt: str, num_outputs: int):
-    status = await update.message.reply_text(f"⏳ Generando {num_outputs} imágenes...")
-
-    try:
-        async with asyncio.TaskGroup() as tg:
-            [
-                tg.create_task(
-                    ReplicateService.generate_image(
-                        prompt,
-                        user_id=update.effective_user.id,
-                        message=update.message,
-                        operation_type="single",
-                    )
-                )
-                for _ in range(num_outputs)
-            ]
-    except ExceptionGroup as e:
-        logging.error(f"Error en generación simple: {str(e)}")
-
-    await status.delete()
 
 
 async def handle_batch_direct_prompt(update: Update, prompt: str, num_outputs: int):
@@ -183,7 +163,7 @@ async def handle_batch_styles(
 
     # Validar estilos y eliminar duplicados
     available_styles = style_manager.get_available_styles()
-    valid_styles = [s for s in styles if s in available_styles][:3]
+    valid_styles = list({s for s in styles if s in available_styles})[:3]
 
     logging.debug(
         f"[User {user_id}] Estilos recibidos: {styles} | Válidos: {valid_styles}"
@@ -197,7 +177,7 @@ async def handle_batch_styles(
         return
 
     # Calcular imágenes por estilo
-    images_per_style = max(1, num_outputs // len(valid_styles))
+    images_per_style = num_outputs
     total_images = images_per_style * len(valid_styles)
 
     logging.info(
@@ -247,8 +227,7 @@ async def handle_batch_styles(
                 ]
 
             logging.info(
-                f"[User {user_id}] Total de tareas creadas: "
-                f"{len(valid_styles) * images_per_style}"
+                f"[User {user_id}] Total de tareas creadas: {len(valid_styles) * images_per_style}"
             )
 
     except ExceptionGroup as e:

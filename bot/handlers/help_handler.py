@@ -20,8 +20,8 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Main commands section
     commands_help = (
         "🤖 *Comandos disponibles:*\n\n"
-        "• `/generate [prompt]` - Genera imágenes a partir de un prompt\n"
-        "• `/generate [número]` - Genera múltiples imágenes con estilo aleatorio\n"
+        "• `/generate [número] [prompt]` - Genera múltiples imágenes del mismo prompt\n"
+        "• `/generate [número]` - Genera imágenes con estilo aleatorio\n"
         "• `/generate [número] styles=estilo1,estilo2` - Combina estilos para generación\n"
         "• `/generate styles=estilo` - Genera con estilo específico sin número\n"
         "• `/generate [número] [prompt]` - Genera múltiples variaciones de un prompt\n"
@@ -45,27 +45,26 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Styles section
     available_styles = style_manager.get_available_styles()
     styles_help = (
-        "🎨 *Uso avanzado de estilos:*\n\n"
-        "• Combina hasta 3 estilos con comas\n"
-        "• Mezcla estilos base con modificadores:\n"
-        "  `styles=professional,cinematic-light`\n"
-        "• Usa `random` para selección aleatoria\n"
-        "• Prioridad de estilos: el primero tiene mayor peso\n\n"
+        "🎨 *Uso de estilos:*\n\n"
+        "• El número especificado se aplica a CADA estilo\n"
+        "• Total de imágenes = número × cantidad de estilos\n"
+        "• Máximo 3 estilos por comando\n"
+        "• Estilos inválidos son ignorados\n"
+        "• Usa `random` para selección aleatoria de estilo\n"
+        "• Los nombres de estilos son insensibles a mayúsculas\n\n"
     )
 
     # Examples section
     examples = (
         "📝 *Ejemplos avanzados:*\n\n"
-        "1. Un estilo por imagen:\n"
-        "`/generate styles=vintage,urban` → 2 imágenes\n\n"
-        "2. Múltiples imágenes por estilo:\n"
-        "`/generate 6 styles=cinematic,professional` → 3 de cada\n\n"
-        "3. Combinación con prompt personalizado:\n"
-        "`/generate ESTEVE retrato en la ciudad styles=urban`\n\n"
-        "4. Generación múltiple con prompt:\n"
-        "`/generate 5 un hombre mirando al horizonte`\n\n"
-        "5. Uso de estilos sin número:\n"
-        "`/generate styles=professional,influencer`\n\n"
+        "1. Un estilo con múltiples imágenes:\n"
+        "`/generate 3 styles=professional` → 3 imágenes\n\n"
+        "2. Dos estilos con imágenes por estilo:\n"
+        "`/generate 2 styles=cinematic,vintage` → 4 imágenes (2 de cada)\n\n"
+        "3. Tres estilos con una imagen cada uno:\n"
+        "`/generate 1 styles=urban,minimalist,influencer` → 3 imágenes\n\n"
+        "4. Generación múltiple con prompt directo:\n"
+        "`/generate 4 retrato en un café iluminado` → 4 imágenes iguales\n\n"
     )
 
     # Tips section
