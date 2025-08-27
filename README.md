@@ -21,6 +21,7 @@ PixelProphetBot is a feature-rich Telegram bot that generates high-quality image
 
 ## Getting Started
 
+### For Users
 1. Search for `@PixelProphetBot` on Telegram
 2. Start a chat and use `/start` to initialize
 3. Configure your settings with `/config`:
@@ -28,6 +29,16 @@ PixelProphetBot is a feature-rich Telegram bot that generates high-quality image
    - Set the model endpoint: `/config model_endpoint MODEL_ENDPOINT`
    - Choose gender preference: `/config gender male` or `/config gender female`
 4. Start generating images with `/generate`
+
+### For Developers
+1. Clone the repository
+2. Create conda environment: `conda env create -f environment.yml`
+3. Activate environment: `conda activate pixel-prophet-bot`
+4. Create `.env` file with required API tokens:
+   - `BOT_TOKEN`: Your Telegram bot token
+   - `OPENAI_API_KEY`: OpenAI API key
+   - `REPLICATE_API_TOKEN`: Replicate API token
+5. Run the bot: `python main.py`
 
 ## Generation Examples
 
@@ -57,15 +68,26 @@ Simply send an image to the bot to:
 
 - Python 3.12
 - python-telegram-bot
-- OpenAI API
+- OpenAI API  
 - Replicate API
-- SQLite (for user configurations)
+- SQLite (for user configurations and generation history)
+- aiosqlite (for async database operations)
 - Pydantic (for data validation)
+- Conda (environment management)
 
 ## Creator
 
 - **Developer**: @Arkantos2374
 - **Donations**: paypal.me/mariusmihailion
+
+## Architecture
+
+The bot uses a modular architecture with:
+- **Handler System**: Separate handlers for each command type
+- **Service Layer**: OpenAI and Replicate API integrations  
+- **Style System**: 9 predefined prompt styles with template placeholders
+- **Database**: SQLite with async operations for user configs and generation history
+- **Logging**: Comprehensive logging to `logs/bot.log`
 
 ## Notes
 
@@ -73,5 +95,7 @@ Simply send an image to the bot to:
 - The bot applies content moderation to avoid inappropriate images
 - Maximum 50 images can be generated in a single command
 - The total number of generated images equals the specified number × number of selected styles
+- All database operations are asynchronous using aiosqlite
+- User configurations are stored as JSON in SQLite
 
 Enjoy creating with PixelProphetBot!
